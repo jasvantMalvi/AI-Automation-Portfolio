@@ -19,7 +19,7 @@ This folder contains practical projects built using n8n, AI agents, OpenAI APIs,
 
 Detailed project documentation will be added progressively.
 
-1. Enterprise AI WhatsApp Support Chatbot
+1. [Enterprise AI WhatsApp Support Chatbot](Enterprise-AI-WhatsApp-Support-Chatbot/README.md) — AI-powered customer support using n8n, WhatsApp, OpenAI and Airtable.
 2. AI IT Help Desk and Incident Resolution Agent
 3. AI KYC Customer Verification
 4. AI Invoice Analyzer Bot
