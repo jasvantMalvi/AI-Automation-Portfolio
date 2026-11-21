@@ -1,0 +1,1374 @@
+{
+  "name": "AI KYC Customer Verification",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "6ca4b3fd-bbf0-46d5-97cd-8817420048b5",
+      "name": "01 Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst m = $json.message || {};\n\nconst isDocument = !!m.document;\nconst isStartCommand = (m.text || '').trim() === '/start';\n\nreturn [{\n  json: {\n    chat_id: m.chat?.id || '',\n    message_id: m.message_id || '',\n    username: m.from?.username || '',\n    first_name: m.from?.first_name || '',\n\n    text: m.text || '',\n    is_start_command: isStartCommand,\n    has_document: isDocument,\n\n    file_id: m.document?.file_id || '',\n    file_name: m.document?.file_name || '',\n    mime_type: m.document?.mime_type || '',\n    file_size: m.document?.file_size || 0,\n\n    message_type: isDocument ? 'DOCUMENT' : 'TEXT',\n\n    received_at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "47e00ac1-a2fa-4cb0-88a9-626f06fc6d4a",
+      "name": "02 Normalize Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        80,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.has_document}}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "id": "76a41c13-fd7c-4b2f-82e5-dc6654fa3425",
+      "name": "03 Check Document",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        384,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "\nWelcome to KYC Verification!\n\nPlease upload your identity document in PDF, JPG, or PNG format.\n\nImportant: Send it as a Telegram file/document, not as a photo.\n",
+        "additionalFields": {}
+      },
+      "id": "191d5901-bcb2-4fe9-a283-62ecdda8889f",
+      "name": "04 Ask For Document",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        688,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{$json.file_id}}",
+        "additionalFields": {}
+      },
+      "id": "f2dca40a-d75e-45c1-b5af-53472f8c42fc",
+      "name": "05 Get Telegram File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [],
+          "string": [
+            {
+              "value1": "={{ $json.result.file_id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "2f099efe-03bf-4a5b-9667-c0b424f8408f",
+      "name": "06 Check File ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "I could not read the file. Please send it again.",
+        "additionalFields": {}
+      },
+      "id": "7e48704a-32e2-4480-afa3-60a8cb91fcf3",
+      "name": "07 File Error Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('02 Normalize Message').first().json;\nconst telegram = $json;\n\nreturn [{\n  json: {\n    ...original,\n\n    file_id: telegram.result?.file_id || original.file_id,\n    file_name: original.file_name,\n    mime_type: original.mime_type,\n\n    file_path: telegram.result?.file_path || null,\n    file_unique_id: telegram.result?.file_unique_id || null,\n    file_size: telegram.result?.file_size || null,\n\n    status: 'FILE_RECEIVED'\n  }\n}];"
+      },
+      "id": "fadbb4c1-19d6-483c-8dc3-e2f8568baaba",
+      "name": "08 Prepare File Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ ['application/pdf','image/jpeg','image/png'].includes($json.mime_type) }}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "id": "318e0d70-e9cc-4cbb-bedf-95d117aaf44f",
+      "name": "09 Check File Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "Please send only PDF, JPG, or PNG files.",
+        "additionalFields": {}
+      },
+      "id": "55a5ab45-fb83-4603-97d8-45fd3b20ee1a",
+      "name": "10 Invalid File Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,kyc_request_id:'KYC-'+Date.now(),case_status:'NEW'}}];"
+      },
+      "id": "fb481750-f5db-42a9-9f9b-a55775cac9aa",
+      "name": "11 Create KYC ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "sheetId": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+        "range": "A:I",
+        "options": {}
+      },
+      "id": "12e645cc-1505-47bc-b2dc-2859d4a800db",
+      "name": "12 Save KYC Case",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        80,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "✅ Your KYC document has been received.",
+        "additionalFields": {}
+      },
+      "id": "4e3c4cd5-bf19-4af8-9061-b4bc564e2e45",
+      "name": "13 Send Received Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        384,
+        208
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,verification_status:'PENDING'}}];"
+      },
+      "id": "2e58c1e4-3f95-4d71-8189-de97ed862d6c",
+      "name": "14 Prepare Verification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        688,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $('09 Check File Type').item.json.mime_type }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "c4f67fe7-b047-4b57-b092-b756456a6331",
+      "name": "15 Check PDF or Image",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        976,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nreturn [{\n  json: {\n    ...data,\n    ocr_status: 'READY',\n    name: 'Test User',\n    document_number: 'TEST123456',\n    address: 'Ahmedabad, Gujarat',\n    confidence: 0.95\n  }\n}];"
+      },
+      "id": "20d54c27-88bf-44eb-a240-fe8d805bd933",
+      "name": "16 Prepare OCR",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.ocr_url}}",
+        "options": {}
+      },
+      "id": "94dfd201-cfd0-4a1d-8681-f371ee4f8b05",
+      "name": "17 OCR Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        1600,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    extracted_name: $json.name,\n    extracted_document_number: $json.document_number,\n    extracted_address: $json.address,\n    ocr_confidence: $json.confidence\n  }\n}];"
+      },
+      "id": "67685a66-1ff9-400a-8ce5-7fe9ccf4c451",
+      "name": "18 Read OCR Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.ocr_confidence}}",
+              "operation": "largerEqual",
+              "value2": 0.8
+            }
+          ]
+        }
+      },
+      "id": "3ca28f34-e8f0-4e04-9b1d-ea2637027778",
+      "name": "19 OCR Confidence Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "The document is unclear. Please send a clearer copy.",
+        "additionalFields": {}
+      },
+      "id": "847b7188-6f5f-44a5-8198-445ea53cce2a",
+      "name": "20 OCR Review Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,normalized_name:String($json.extracted_name||'').trim().toLowerCase(),normalized_document_number:String($json.extracted_document_number||'').trim().toUpperCase()}}];"
+      },
+      "id": "79b2a0de-b9e1-4ed3-8648-3c96afb7a9bb",
+      "name": "21 Normalize Identity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const a = String($json.extracted_name || '').trim().toLowerCase();\nconst b = String($json.normalized_name || '').trim().toLowerCase();\n\nreturn [{\n  json:{\n    ...$json,\n    customer_name:a,\n    name_match:a && b && a===b\n  }\n}];"
+      },
+      "id": "eedcd281-cddc-4fe0-ae59-4492de98ad39",
+      "name": "22 Check Name Match",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        80,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.name_match}}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "id": "f3e2ffbd-8b8e-411e-9fc7-c2f97999517c",
+      "name": "23 Name Match Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        384,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,risk_flag:true,review_reason:'Name mismatch'}}];"
+      },
+      "id": "912cde40-bdd0-4d6c-bffa-b3b2e79a02a4",
+      "name": "24 Name Mismatch Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        688,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=String($json.normalized_document_number||'');return [{json:{...$json,document_valid:v.length>=6}}];"
+      },
+      "id": "0f4ebbc2-a94b-4f82-baa0-9f66769cdf7e",
+      "name": "25 Check Document Number",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        976,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.document_valid}}",
+              "value2": "={{ true }}"
+            }
+          ]
+        }
+      },
+      "id": "e0aa7eeb-0095-4e24-81eb-51969f66b73c",
+      "name": "26 Document Number Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,risk_flag:true,review_reason:'Invalid document number'}}];"
+      },
+      "id": "a9b8f6ac-975e-4245-aced-11f662a483b0",
+      "name": "27 Invalid Document Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "lookup",
+        "sheetId": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+        "range": "KYC_Approved!A:M",
+        "lookupColumn": "document_number",
+        "lookupValue": "={{$json.document_number}}",
+        "options": {}
+      },
+      "id": "110e126e-1c1c-4a3a-b486-5eb591da4152",
+      "name": "28 Check Duplicate",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [],
+          "string": [
+            {
+              "value1": "={{String($json.duplicate)}}",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "646cf5db-3342-4a22-bb69-ea33317c72d5",
+      "name": "29 Duplicate Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,risk_flag:true,review_reason:'Possible duplicate document'}}];"
+      },
+      "id": "d9c697c1-1cd5-494a-9501-f56a4e019f27",
+      "name": "30 Duplicate Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$json,\n    address_verified: true\n  }\n}];"
+      },
+      "id": "68665664-d45c-430b-8c41-18ece760fa2f",
+      "name": "31 Prepare Address Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json.address_url}}",
+        "options": {}
+      },
+      "id": "b1807046-c1e4-47de-84cc-f7c866fe2729",
+      "name": "32 Verify Address",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        80,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,address_verified:Boolean($json.verified||$json.address_verified)}}];"
+      },
+      "id": "7fd6a270-39ad-4d8c-9444-dae629851a79",
+      "name": "33 Read Address Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        384,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.address_verified}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "1b09c51c-386b-49bf-9bbd-268611e53ff5",
+      "name": "34 Address Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        688,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,risk_flag:true,review_reason:'Address verification failed'}}];"
+      },
+      "id": "5f95a8d6-fd31-4c0b-affb-f01283cf97a3",
+      "name": "35 Address Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        976,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let s=0;\n\nif($json.risk_flag)\n  s+=60;\n\nif(!$json.address_verified)\n  s+=20;\n\nif(($json.ocr_confidence||0)<.9)\n  s+=10;\n\nreturn [{\n  json:{\n    ...$json,\n    risk_score:s,\n    risk_level:s>=70?'HIGH':s>=40?'MEDIUM':'LOW'\n  }\n}];"
+      },
+      "id": "dfced178-c6ad-4c5e-bb0b-773f02097fe7",
+      "name": "36 Calculate Risk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.risk_level}}",
+              "value2": "HIGH"
+            }
+          ]
+        }
+      },
+      "id": "8f987609-a415-4910-a4f2-88389276c656",
+      "name": "37 Risk Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,decision:'MANUAL_REVIEW'}}];"
+      },
+      "id": "72cf9429-a9e6-40c0-9043-65e837612e80",
+      "name": "38 High Risk Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ok =\n  $json.risk_level === 'LOW' &&\n  $json.name_match &&\n  $json.document_valid &&\n  $json.address_verified;\n\nreturn [{\n  json: {\n    ...$json,\n    decision: ok ? 'APPROVED' : 'MANUAL_REVIEW'\n  }\n}];"
+      },
+      "id": "4fd4f81c-2745-48f1-8326-1f62436519fd",
+      "name": "39 Prepare AI Decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.decision}}",
+              "value2": "=APPROVED"
+            }
+          ]
+        }
+      },
+      "id": "f436ddbf-b705-4a9d-a32f-5183b7f493d7",
+      "name": "40 Final Decision",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+        "options": {}
+      },
+      "id": "1ec1b5cd-f5b0-40fc-80a2-9b5714c76873",
+      "name": "41 Save Approved KYC",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "🎉 Your KYC verification is approved.",
+        "additionalFields": {}
+      },
+      "id": "2bee6035-7d7e-4bfc-8014-347d9e5eed2c",
+      "name": "42 Send Approval",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        80,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,review_status:'PENDING'}}];"
+      },
+      "id": "a3ab289b-32b0-41a6-ae92-0e1e56bdeec2",
+      "name": "43 Prepare Manual Review",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        384,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+        "options": {}
+      },
+      "id": "9b3495ef-56c6-4cb5-8881-b4d127464315",
+      "name": "44 Save Manual Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        688,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$json.chat_id}}",
+        "text": "Your KYC is under manual review. We will update you soon.",
+        "additionalFields": {}
+      },
+      "id": "ac0103e8-bbb8-45f0-87d4-c7379dad5bd4",
+      "name": "45 Notify Manual Review",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        976,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,audit_id:'AUD-'+Date.now(),audit_event:'KYC_VERIFICATION'}}];"
+      },
+      "id": "a798cf52-a926-4f50-a9ae-5eeb1d496542",
+      "name": "46 Create Audit Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "append",
+        "sheetId": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+        "options": {}
+      },
+      "id": "e2f35f72-b23f-4a35-b3fd-82b700e10ae4",
+      "name": "47 Save Audit Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('01 Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Your KYC verification process is complete.",
+        "additionalFields": {}
+      },
+      "id": "275b7c64-11bb-4f3d-a812-0474466977e5",
+      "name": "48 Send Completion Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,completed:true,completed_at:new Date().toISOString()}}];"
+      },
+      "id": "9dfb97b4-1459-485b-8a3f-7d59a03aeb0f",
+      "name": "49 Final Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        736
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d09db27f-d81e-4e77-b271-9403203c3186",
+      "name": "50 End KYC",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2368,
+        752
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lookupResult = $json;\n\nreturn [{\n  json: {\n    ...lookupResult,\n    duplicate: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        384
+      ],
+      "id": "a25f649c-4f0d-435e-b13c-eae4c379c70a",
+      "name": "28A Set Duplicate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 Normalize Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Normalize Message": {
+      "main": [
+        [
+          {
+            "node": "03 Check Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Check Document": {
+      "main": [
+        [
+          {
+            "node": "05 Get Telegram File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "04 Ask For Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Ask For Document": {
+      "main": [
+        []
+      ]
+    },
+    "05 Get Telegram File": {
+      "main": [
+        [
+          {
+            "node": "06 Check File ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Check File ID": {
+      "main": [
+        [
+          {
+            "node": "08 Prepare File Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "07 File Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 File Error Message": {
+      "main": [
+        [
+          {
+            "node": "08 Prepare File Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Prepare File Data": {
+      "main": [
+        [
+          {
+            "node": "09 Check File Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 Check File Type": {
+      "main": [
+        [
+          {
+            "node": "11 Create KYC ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 Invalid File Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Invalid File Message": {
+      "main": [
+        []
+      ]
+    },
+    "11 Create KYC ID": {
+      "main": [
+        [
+          {
+            "node": "12 Save KYC Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Save KYC Case": {
+      "main": [
+        [
+          {
+            "node": "13 Send Received Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Send Received Message": {
+      "main": [
+        [
+          {
+            "node": "14 Prepare Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Prepare Verification": {
+      "main": [
+        [
+          {
+            "node": "15 Check PDF or Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Check PDF or Image": {
+      "main": [
+        [
+          {
+            "node": "16 Prepare OCR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "20 OCR Review Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Prepare OCR": {
+      "main": [
+        [
+          {
+            "node": "18 Read OCR Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 Read OCR Result": {
+      "main": [
+        [
+          {
+            "node": "19 OCR Confidence Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 OCR Confidence Check": {
+      "main": [
+        [
+          {
+            "node": "21 Normalize Identity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "20 OCR Review Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 OCR Review Message": {
+      "main": [
+        []
+      ]
+    },
+    "21 Normalize Identity": {
+      "main": [
+        [
+          {
+            "node": "22 Check Name Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 Check Name Match": {
+      "main": [
+        [
+          {
+            "node": "23 Name Match Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "23 Name Match Decision": {
+      "main": [
+        [
+          {
+            "node": "25 Check Document Number",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "24 Name Mismatch Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 Name Mismatch Review": {
+      "main": [
+        [
+          {
+            "node": "25 Check Document Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25 Check Document Number": {
+      "main": [
+        [
+          {
+            "node": "26 Document Number Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "26 Document Number Decision": {
+      "main": [
+        [
+          {
+            "node": "28 Check Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "27 Invalid Document Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "27 Invalid Document Review": {
+      "main": [
+        [
+          {
+            "node": "28 Check Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28 Check Duplicate": {
+      "main": [
+        [
+          {
+            "node": "28A Set Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29 Duplicate Decision": {
+      "main": [
+        [
+          {
+            "node": "31 Prepare Address Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "30 Duplicate Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "30 Duplicate Review": {
+      "main": [
+        [
+          {
+            "node": "31 Prepare Address Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "31 Prepare Address Check": {
+      "main": [
+        [
+          {
+            "node": "34 Address Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "34 Address Decision": {
+      "main": [
+        [
+          {
+            "node": "36 Calculate Risk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "35 Address Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "35 Address Review": {
+      "main": [
+        [
+          {
+            "node": "36 Calculate Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "36 Calculate Risk": {
+      "main": [
+        [
+          {
+            "node": "37 Risk Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "37 Risk Decision": {
+      "main": [
+        [
+          {
+            "node": "39 Prepare AI Decision",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "38 High Risk Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "38 High Risk Review": {
+      "main": [
+        [
+          {
+            "node": "46 Create Audit Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "39 Prepare AI Decision": {
+      "main": [
+        [
+          {
+            "node": "40 Final Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "40 Final Decision": {
+      "main": [
+        [
+          {
+            "node": "41 Save Approved KYC",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "43 Prepare Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "41 Save Approved KYC": {
+      "main": [
+        [
+          {
+            "node": "42 Send Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "42 Send Approval": {
+      "main": [
+        [
+          {
+            "node": "46 Create Audit Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "43 Prepare Manual Review": {
+      "main": [
+        [
+          {
+            "node": "44 Save Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "44 Save Manual Review": {
+      "main": [
+        [
+          {
+            "node": "45 Notify Manual Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "45 Notify Manual Review": {
+      "main": [
+        [
+          {
+            "node": "46 Create Audit Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "46 Create Audit Data": {
+      "main": [
+        [
+          {
+            "node": "47 Save Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "47 Save Audit Log": {
+      "main": [
+        [
+          {
+            "node": "48 Send Completion Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "48 Send Completion Message": {
+      "main": [
+        [
+          {
+            "node": "49 Final Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "49 Final Status": {
+      "main": [
+        [
+          {
+            "node": "50 End KYC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28A Set Duplicate": {
+      "main": [
+        [
+          {
+            "node": "29 Duplicate Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
