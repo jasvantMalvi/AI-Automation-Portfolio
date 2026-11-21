@@ -1,0 +1,847 @@
+{
+  "name": "AI Attendance Intelligence Agent Using Airtable",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        640,
+        192
+      ],
+      "id": "0d1fdf7f-09ba-4c5c-89fe-b2365136df4b",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst students = $input.all().map(item => item.json.fields);\n\n// Calculate attendance statistics\nconst totalStudents = students.length;\n\nconst totalClasses = students.reduce(\n  (sum, s) => sum + Number(s[\"Total Classes\"] || 0), 0\n);\n\nconst totalPresent = students.reduce(\n  (sum, s) => sum + Number(s[\"Present Days\"] || 0), 0\n);\n\nconst totalAbsent = students.reduce(\n  (sum, s) => sum + Number(s[\"Absent Days\"] || 0), 0\n);\n\nconst averageAttendance = totalClasses > 0\n  ? Number(((totalPresent / totalClasses) * 100).toFixed(2))\n  : 0;\n\n// Classify students\nconst criticalStudents = students.filter(\n  s => Number(s[\"Attendance Percentage\"] || 0) < 75\n);\n\nconst warningStudents = students.filter(\n  s => Number(s[\"Attendance Percentage\"] || 0) >= 75 &&\n       Number(s[\"Attendance Percentage\"] || 0) < 85\n);\n\nconst goodStudents = students.filter(\n  s => Number(s[\"Attendance Percentage\"] || 0) >= 85\n);\n\n// Identify excellent attendance\nconst excellentStudents = students.filter(\n  s => Number(s[\"Attendance Percentage\"] || 0) >= 95\n);\n\n// Student details for AI analysis\nconst studentDetails = students.map(s => ({\n  student_id: s[\"Student ID\"],\n  student_name: s[\"Student Name\"],\n  email: s.Email,\n  class: s.Class,\n  department: s.Department,\n  total_classes: Number(s[\"Total Classes\"] || 0),\n  present_days: Number(s[\"Present Days\"] || 0),\n  absent_days: Number(s[\"Absent Days\"] || 0),\n  attendance_percentage: Number(s[\"Attendance Percentage\"] || 0),\n  attendance_status: s[\"Attendance Status\"],\n  remarks: s.Remarks || \"\"\n}));\n\nreturn [{\n  json: {\n    report_date: new Date().toISOString(),\n    total_students: totalStudents,\n    total_classes: totalClasses,\n    total_present: totalPresent,\n    total_absent: totalAbsent,\n    average_attendance: averageAttendance,\n\n    good_students_count: goodStudents.length,\n    warning_students_count: warningStudents.length,\n    critical_students_count: criticalStudents.length,\n    excellent_students_count: excellentStudents.length,\n\n    critical_students: criticalStudents.map(s => ({\n      name: s[\"Student Name\"],\n      student_id: s[\"Student ID\"],\n      attendance: s[\"Attendance Percentage\"],\n      email: s.Email,\n      class: s.Class\n    })),\n\n    warning_students: warningStudents.map(s => ({\n      name: s[\"Student Name\"],\n      attendance: s[\"Attendance Percentage\"]\n    })),\n\n    excellent_students: excellentStudents.map(s => ({\n      name: s[\"Student Name\"],\n      attendance: s[\"Attendance Percentage\"]\n    })),\n\n    student_details: studentDetails\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "102965fa-3c45-4961-aa2f-878b5e9043e5",
+      "name": "Process Student Attendance"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                6
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0c995067-8453-4cd3-8ed8-c549b20abf9b",
+      "name": "Weekly Attendance Schedule"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Attendance Intelligence System"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_STUDENT_ATTENDANCE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Student Attendance"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "e465ffe5-445d-43b9-95ab-e4d25cf21890",
+      "name": "\tAirtable - Fetch Student Records"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "\nYou are an expert AI Attendance Intelligence Analyst.\n\nYour responsibility is to analyze student attendance data and generate a professional, accurate and actionable attendance intelligence report for the college administrator.\n\nANALYSIS TASKS:\n\n1. Analyze overall attendance performance.\n2. Evaluate average attendance and student distribution.\n3. Identify students with attendance below 75%.\n4. Identify students between 75% and 85%.\n5. Highlight students with attendance above 95%.\n6. Identify students who need immediate attention.\n7. Analyze class-wise and department-wise attendance.\n8. Identify potential attendance risks.\n9. Generate practical recommendations for administrators.\n\nIMPORTANT RULES:\n\n- Use only the supplied dataset.\n- Never invent student information or statistics.\n- Do not assume reasons for student absenteeism.\n- Do not claim attendance trends without historical data.\n- Prioritize students below 75%.\n- Keep recommendations realistic and actionable.\n- Verify that your reported counts match the supplied statistics.\n- Use professional and simple language.\n\nOUTPUT REQUIREMENT:\n\nReturn ONLY valid JSON without Markdown formatting.\n\nUse this exact structure:\n\n{\n  \"report_title\": \"AI Student Attendance Intelligence Report\",\n  \"executive_summary\": \"Overall attendance analysis\",\n  \"performance_analysis\": \"Detailed performance evaluation\",\n  \"attendance_insights\": [\n    \"Insight 1\",\n    \"Insight 2\",\n    \"Insight 3\"\n  ],\n  \"critical_students_analysis\": \"Analysis of students below 75%\",\n  \"warning_students_analysis\": \"Analysis of students between 75% and 85%\",\n  \"excellent_students_analysis\": \"Analysis of students above 95%\",\n  \"department_analysis\": \"Department-wise observations based on available data\",\n  \"risk_assessment\": \"Attendance risks and priorities\",\n  \"recommendations\": [\n    \"Recommendation 1\",\n    \"Recommendation 2\",\n    \"Recommendation 3\"\n  ],\n  \"priority_actions\": [\n    \"Immediate action 1\",\n    \"Immediate action 2\"\n  ],\n  \"conclusion\": \"Final administrator summary\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        672,
+        0
+      ],
+      "id": "7536406c-10f8-4e48-8240-3605cda9e410",
+      "name": "\tAI Attendance Intelligence Analyst"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rawOutput = $input.first().json.output;\n\n// Parse AI JSON response\nconst report = typeof rawOutput === \"string\"\n  ? JSON.parse(rawOutput)\n  : rawOutput;\n\n// Get statistics from previous Code node\nconst stats = $('Process Student Attendance').first().json;\n\nconst insights = (report.attendance_insights || [])\n  .map(item => `<li>${item}</li>`).join('');\n\nconst recommendations = (report.recommendations || [])\n  .map(item => `<li>${item}</li>`).join('');\n\nconst actions = (report.priority_actions || [])\n  .map(item => `<li>${item}</li>`).join('');\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\nbody {\n  font-family: Arial, sans-serif;\n  background: #f4f6f9;\n  color: #263238;\n  padding: 20px;\n}\n.container {\n  max-width: 750px;\n  margin: auto;\n  background: #ffffff;\n  border-radius: 12px;\n  overflow: hidden;\n}\n.header {\n  background: #17365d;\n  color: white;\n  padding: 28px;\n  text-align: center;\n}\n.content { padding: 25px; }\n.cards {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n}\n.card {\n  background: #f1f5f9;\n  padding: 18px;\n  border-radius: 8px;\n}\n.value {\n  font-size: 25px;\n  font-weight: bold;\n  margin: 8px 0;\n}\n.section {\n  margin-top: 25px;\n  padding-bottom: 15px;\n  border-bottom: 1px solid #e5e7eb;\n}\nli { margin-bottom: 10px; }\n.footer {\n  background: #f1f5f9;\n  padding: 18px;\n  text-align: center;\n  font-size: 12px;\n  color: #64748b;\n}\n</style>\n</head>\n<body>\n<div class=\"container\">\n\n<div class=\"header\">\n  <h1>${report.report_title}</h1>\n  <p>Attendance Intelligence Dashboard</p>\n  <p>Report Date: ${new Date(stats.report_date).toLocaleDateString('en-IN')}</p>\n</div>\n\n<div class=\"content\">\n\n<div class=\"cards\">\n  <div class=\"card\">\n    <div>Total Students</div>\n    <div class=\"value\">${stats.total_students}</div>\n  </div>\n  <div class=\"card\">\n    <div>Average Attendance</div>\n    <div class=\"value\">${stats.average_attendance}%</div>\n  </div>\n  <div class=\"card\">\n    <div>Critical Students</div>\n    <div class=\"value\">${stats.critical_students_count}</div>\n  </div>\n  <div class=\"card\">\n    <div>Warning Students</div>\n    <div class=\"value\">${stats.warning_students_count}</div>\n  </div>\n</div>\n\n<div class=\"section\">\n<h2>Executive Summary</h2>\n<p>${report.executive_summary}</p>\n</div>\n\n<div class=\"section\">\n<h2>Performance Analysis</h2>\n<p>${report.performance_analysis}</p>\n</div>\n\n<div class=\"section\">\n<h2>Attendance Insights</h2>\n<ul>${insights}</ul>\n</div>\n\n<div class=\"section\">\n<h2>Critical Students Analysis</h2>\n<p>${report.critical_students_analysis}</p>\n</div>\n\n<div class=\"section\">\n<h2>Warning Students Analysis</h2>\n<p>${report.warning_students_analysis}</p>\n</div>\n\n<div class=\"section\">\n<h2>Excellent Students Analysis</h2>\n<p>${report.excellent_students_analysis}</p>\n</div>\n\n<div class=\"section\">\n<h2>Department Analysis</h2>\n<p>${report.department_analysis}</p>\n</div>\n\n<div class=\"section\">\n<h2>Risk Assessment</h2>\n<p>${report.risk_assessment}</p>\n</div>\n\n<div class=\"section\">\n<h2>AI Recommendations</h2>\n<ul>${recommendations}</ul>\n</div>\n\n<div class=\"section\">\n<h2>Priority Actions</h2>\n<ul>${actions}</ul>\n</div>\n\n<div class=\"section\">\n<h2>Conclusion</h2>\n<p>${report.conclusion}</p>\n</div>\n\n</div>\n\n<div class=\"footer\">\nGenerated automatically by AI Attendance Intelligence Agent\n</div>\n\n</div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    report_id: `ATT-${Date.now()}`,\n    report_date: stats.report_date,\n    report_period: \"Weekly\",\n    total_students: stats.total_students,\n    average_attendance: stats.average_attendance,\n    good_students: stats.good_students_count,\n    warning_students: stats.warning_students_count,\n    critical_students: stats.critical_students_count,\n    ai_insights: report.attendance_insights,\n    recommendations: report.recommendations,\n    full_report_html: html,\n    email_status: \"Pending\",\n    email_subject: `Attendance Intelligence Report - ${new Date().toLocaleDateString('en-IN')}`\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "acabb76c-6336-4665-8bbc-2154d24f7cf0",
+      "name": "\tBuild HTML Attendance Report"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Attendance Intelligence System"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_ATTENDANCE_REPORTS_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Attendance Reports"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Report ID": "={{ $json.report_id }}",
+            "Report Date": "={{ $json.report_date }}",
+            "Report Period": "={{ $json.report_period }}",
+            "Total Students": "={{ $json.total_students }}",
+            "Average Attendance": "={{ $json.average_attendance }}",
+            "Good Attendance Students": "={{ $json.good_students }}",
+            "Warning Students": "={{ $json.warning_students }}",
+            "Critical Students": "={{ $json.critical_students }}",
+            "AI Performance Summary": "={{ $('\tAI Attendance Intelligence Analyst').first().json.output }}",
+            "Attendance Insights": "={{ $json.ai_insights.join('\\n') }}",
+            "Critical Students Details": "={{ JSON.stringify($('Process Student Attendance').first().json.critical_students) }}",
+            "AI Recommendations": "={{ $json.recommendations.join('\\n') }}",
+            "Full Report HTML": "={{ $json.full_report_html }}",
+            "Email Status": "={{ $json.email_status }}",
+            "Report Generated By": "AI Attendance Intelligence Agent"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Report ID",
+              "displayName": "Report ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Report Date",
+              "displayName": "Report Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Report Period",
+              "displayName": "Report Period",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Daily",
+                  "value": "Daily"
+                },
+                {
+                  "name": "Weekly",
+                  "value": "Weekly"
+                },
+                {
+                  "name": "Monthly",
+                  "value": "Monthly"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Total Students",
+              "displayName": "Total Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Average Attendance",
+              "displayName": "Average Attendance",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Good Attendance Students",
+              "displayName": "Good Attendance Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Warning Students",
+              "displayName": "Warning Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Critical Students",
+              "displayName": "Critical Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Performance Summary",
+              "displayName": "AI Performance Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attendance Insights",
+              "displayName": "Attendance Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Critical Students Details",
+              "displayName": "Critical Students Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Recommendations",
+              "displayName": "AI Recommendations",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Full Report HTML",
+              "displayName": "Full Report HTML",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Status",
+              "displayName": "Email Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Sent",
+                  "value": "Sent"
+                },
+                {
+                  "name": "Failed",
+                  "value": "Failed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Report Generated By",
+              "displayName": "Report Generated By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "be51b2d7-992e-4594-9f30-46c51ad40326",
+      "name": "\tAirtable - Save Attendance Report"
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL_ADDRESS",
+        "subject": "={{ $('\tBuild HTML Attendance Report').item.json.email_subject }}",
+        "message": "={{ $('\tBuild HTML Attendance Report').item.json.full_report_html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "1621c02c-2ad2-493c-b3d6-2376325586eb",
+      "name": "\tGmail - Send Attendance Report"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Attendance Intelligence System"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_ATTENDANCE_REPORTS_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Attendance Reports"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('\tAirtable - Save Attendance Report').item.json.id }}",
+            "Email Status": "Sent"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Report ID",
+              "displayName": "Report ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Report Date",
+              "displayName": "Report Date",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Report Period",
+              "displayName": "Report Period",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Daily",
+                  "value": "Daily"
+                },
+                {
+                  "name": "Weekly",
+                  "value": "Weekly"
+                },
+                {
+                  "name": "Monthly",
+                  "value": "Monthly"
+                }
+              ],
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Total Students",
+              "displayName": "Total Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Average Attendance",
+              "displayName": "Average Attendance",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Good Attendance Students",
+              "displayName": "Good Attendance Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Warning Students",
+              "displayName": "Warning Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Critical Students",
+              "displayName": "Critical Students",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "AI Performance Summary",
+              "displayName": "AI Performance Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Attendance Insights",
+              "displayName": "Attendance Insights",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Critical Students Details",
+              "displayName": "Critical Students Details",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "AI Recommendations",
+              "displayName": "AI Recommendations",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Full Report HTML",
+              "displayName": "Full Report HTML",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Email Status",
+              "displayName": "Email Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pending",
+                  "value": "Pending"
+                },
+                {
+                  "name": "Sent",
+                  "value": "Sent"
+                },
+                {
+                  "name": "Failed",
+                  "value": "Failed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Report Generated By",
+              "displayName": "Report Generated By",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ],
+      "id": "89bdfe65-cb6a-40af-be64-53d651c34a7c",
+      "name": "Airtable - Update Email Status"
+    },
+    {
+      "parameters": {
+        "content": "Automatically triggers the attendance analysis workflow every Saturday at 9 AM.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -128
+      ],
+      "id": "4114fc02-058c-4316-bfeb-559313490203",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Fetches all student attendance records from the Airtable Student Attendance table.",
+        "height": 112,
+        "width": 192,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -128
+      ],
+      "id": "37a854af-d7b6-4f3e-aedc-8607460b1306",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Calculates attendance statistics, classifies students, and identifies attendance risks.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -128
+      ],
+      "id": "a5d2e122-f7ea-4656-bd93-4a72d2b7eeab",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Analyzes attendance performance and generates insights, risk assessments, and recommendations.",
+        "height": 112,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -128
+      ],
+      "id": "98391ff1-0f2b-4cb2-9f8c-30d7e15a9ae1",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Converts attendance statistics and AI insights into a professional HTML report.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -128
+      ],
+      "id": "5db1082a-598d-4749-9fc9-8f41771a21ad",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Saves the generated attendance report in the Airtable Attendance Reports table.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -128
+      ],
+      "id": "8eadb5a8-7c3e-40e3-84af-2fb7b8b52821",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Sends the attendance report to the configured recipient through Gmail.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        -128
+      ],
+      "id": "d97e14c8-5481-42c1-a5ab-8bf7a351a0db",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Updates the Airtable report record with the email delivery status after sending.",
+        "height": 112,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        -128
+      ],
+      "id": "39cac1a5-7d9b-461e-aeea-f41b02364329",
+      "name": "Sticky Note7"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "\tAI Attendance Intelligence Analyst",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Student Attendance": {
+      "main": [
+        [
+          {
+            "node": "\tAI Attendance Intelligence Analyst",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Attendance Schedule": {
+      "main": [
+        [
+          {
+            "node": "\tAirtable - Fetch Student Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tAirtable - Fetch Student Records": {
+      "main": [
+        [
+          {
+            "node": "Process Student Attendance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tAI Attendance Intelligence Analyst": {
+      "main": [
+        [
+          {
+            "node": "\tBuild HTML Attendance Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tBuild HTML Attendance Report": {
+      "main": [
+        [
+          {
+            "node": "\tAirtable - Save Attendance Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tAirtable - Save Attendance Report": {
+      "main": [
+        [
+          {
+            "node": "\tGmail - Send Attendance Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tGmail - Send Attendance Report": {
+      "main": [
+        [
+          {
+            "node": "Airtable - Update Email Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}
