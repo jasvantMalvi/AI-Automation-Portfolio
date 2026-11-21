@@ -1,0 +1,457 @@
+{
+  "name": "Monthly Client Work & Billing Automation System",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Clients"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1344,
+        512
+      ],
+      "id": "9798743f-e858-4f40-a30c-f477a04e7d1b",
+      "name": "Get Client Details"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1017001956,
+          "mode": "list",
+          "cachedResultName": "Work_Log"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1552,
+        512
+      ],
+      "id": "5a326192-2429-4675-be95-1faf2707bbc9",
+      "name": "Get Monthly Work Records"
+    },
+    {
+      "parameters": {
+        "resource": "invoice",
+        "invoice": "={{ $json.Invoice_Data }}",
+        "fileName": "={{$json.PDF_FileName}}"
+      },
+      "type": "n8n-nodes-pdfops.pdfops",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        512
+      ],
+      "id": "ed21bb66-9efe-4415-9e9c-ca6863abf53c",
+      "name": "Generate an invoice PDF"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.Telegram_Message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3056,
+        512
+      ],
+      "id": "9a5a9205-45b2-4e54-a816-23552ba12986",
+      "name": "Send Monthly Summary"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 899064639,
+          "mode": "list",
+          "cachedResultName": "Monthly_Reports"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client_ID": "={{ $('Calculate Client-Wise Billing').item.json.Client_ID }}",
+            "Month": "={{ $('Calculate Client-Wise Billing').item.json.Billing_Period }}",
+            "Report_ID": "={{ 'RPT-' + $('Calculate Client-Wise Billing').item.json.Billing_Period + '-' + $('Calculate Client-Wise Billing').item.json.Client_ID }}",
+            "Total_Amount": "={{ $('Calculate Client-Wise Billing').item.json.Total_Amount }}",
+            "Status": "Sent",
+            "Telegram_File_ID": "={{ $json.result.document.file_id }}"
+          },
+          "matchingColumns": [
+            "Client_ID"
+          ],
+          "schema": [
+            {
+              "id": "Report_ID",
+              "displayName": "Report_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client_ID",
+              "displayName": "Client_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total_Amount",
+              "displayName": "Total_Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Telegram_File_ID",
+              "displayName": "Telegram_File_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2608,
+        512
+      ],
+      "id": "bd8f339f-0cb1-4708-81d2-bbfbfab98530",
+      "name": "Save Monthly Report History",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const workRecords = $input.all().map(item => item.json);\nconst clients = $('Get Client Details').all().map(item => item.json);\n\nconst now = new Date();\nconst year = now.getFullYear();\nconst month = now.getMonth();\n\nconst groups = {};\n\nfor (const work of workRecords) {\n  const clientId = String(work.Client_ID || work.Client || '').trim();\n  if (!clientId) continue;\n\n  const client = clients.find(c =>\n    String(c.Client_ID || c.Client || '').trim() === clientId\n  );\n  if (!client) continue;\n\n  const rawDate = String(work.Date || '').trim();\n  const dateMatch = rawDate.match(\n    /^(\\d{4})-(\\d{1,2})-(\\d{1,2})$/\n  );\n\n  let workDate;\n\n  if (dateMatch) {\n    workDate = new Date(\n      Number(dateMatch[1]),\n      Number(dateMatch[2]) - 1,\n      Number(dateMatch[3])\n    );\n  } else {\n    const shortMatch = rawDate.match(\n      /^(\\d{1,2})[-\\s]([A-Za-z]{3})$/\n    );\n\n    if (shortMatch) {\n      const monthNames = [\n        'jan','feb','mar','apr','may','jun',\n        'jul','aug','sep','oct','nov','dec'\n      ];\n\n      const workMonth = monthNames.indexOf(\n        shortMatch[2].toLowerCase()\n      );\n\n      if (workMonth < 0) continue;\n\n      workDate = new Date(\n        year,\n        workMonth,\n        Number(shortMatch[1])\n      );\n    } else {\n      continue;\n    }\n  }\n\n  if (\n    workDate.getFullYear() !== year ||\n    workDate.getMonth() !== month\n  ) continue;\n\n  const qty = Number(work.Qty || 0);\n  const rate = Number(work.Rate || 0);\n  const amount = work.Amount !== undefined &&\n                 work.Amount !== ''\n    ? Number(work.Amount)\n    : qty * rate;\n\n  if (!Number.isFinite(amount) || amount < 0) continue;\n\n  const workItem = {\n    Date: rawDate,\n    Project: work.Project || '',\n    Work_Description: work.Work_Description || work.Work || 'CAD Work',\n    Pricing_Type: work.Pricing_Type || 'Not Specified',\n    Unit: work.Unit || 'Item',\n    Qty: qty,\n    Rate: rate,\n    Amount: amount\n  };\n\n  // Remove exact duplicate rows only\n  const uniqueKey = JSON.stringify(workItem);\n\n  if (!groups[clientId]) {\n    groups[clientId] = {\n      Client_ID: clientId,\n      Client_Name: client.Client_Name || clientId,\n      Email: client.Email || '',\n      Phone: client.Phone || '',\n      Work_Items: [],\n      _seen: new Set(),\n      Total_Amount: 0\n    };\n  }\n\n  if (groups[clientId]._seen.has(uniqueKey)) continue;\n\n  groups[clientId]._seen.add(uniqueKey);\n  groups[clientId].Work_Items.push(workItem);\n  groups[clientId].Total_Amount += amount;\n}\n\nconst billingPeriod =\n  `${year}-${String(month + 1).padStart(2, '0')}`;\n\nconst result = Object.values(groups).map(client => {\n  delete client._seen;\n\n  return {\n    json: {\n      ...client,\n      Total_Amount: Number(client.Total_Amount.toFixed(2)),\n      Total_Work_Items: client.Work_Items.length,\n      Billing_Period: billingPeriod\n    }\n  };\n});\n\nreturn result;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        512
+      ],
+      "id": "b79826ac-33c1-4062-9c3f-cbcecb286969",
+      "name": "Calculate Client-Wise Billing"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst reports = $('Calculate Client-Wise Billing')\n  .all()\n  .map(item => item.json);\n\nif (reports.length === 0) {\n  return [{\n    json: {\n      Telegram_Message:\n        'MONTHLY CAD BILLING SUMMARY\\n\\nNo client invoices were generated.'\n    }\n  }];\n}\n\nconst totalClients = reports.length;\n\nconst totalWorkItems = reports.reduce(\n  (sum, report) => sum + Number(report.Total_Work_Items || 0),\n  0\n);\n\nconst totalAmount = reports.reduce(\n  (sum, report) => sum + Number(report.Total_Amount || 0),\n  0\n);\n\nconst billingPeriod = reports[0].Billing_Period || 'Not available';\n\nconst clientLines = reports.map(report =>\n  `• ${report.Client_Name} (${report.Client_ID}): ₹${Number(report.Total_Amount || 0).toFixed(2)}`\n);\n\nconst message = [\n  '📊 MONTHLY CAD BILLING SUMMARY',\n  '',\n  `📅 Billing Period: ${billingPeriod}`,\n  `👥 Total Clients: ${totalClients}`,\n  `📄 Invoices Generated: ${totalClients}`,\n  `🛠 Total Work Items: ${totalWorkItems}`,\n  `💰 Total Billing: ₹${totalAmount.toFixed(2)}`,\n  '',\n  'CLIENT-WISE BREAKDOWN',\n  ...clientLines,\n  '',\n  '✅ All client invoices have been processed.'\n].join('\\n');\n\nreturn [{\n  json: {\n    Billing_Period: billingPeriod,\n    Total_Clients: totalClients,\n    Total_PDFs: totalClients,\n    Total_Work_Items: totalWorkItems,\n    Total_Amount: Number(totalAmount.toFixed(2)),\n    Telegram_Message: message\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2832,
+        512
+      ],
+      "id": "e4e57af2-20b9-45fc-a70f-d2c0a81eac98",
+      "name": "Prepare Monthly Summary"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        704,
+        384
+      ],
+      "id": "53304bc8-99f1-43a5-89be-a2cd09f74762",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2400,
+        512
+      ],
+      "id": "03e3755a-a069-4350-a9a2-3c1d69683678",
+      "name": "Send a document"
+    },
+    {
+      "parameters": {
+        "jsCode": "const clients = $input.all().map(item => item.json);\n\nreturn clients.map(data => {\n  const workItems = data.Work_Items || [];\n\n  const items = workItems.map(work => {\n    const qty = Number(work.Qty || 0);\n    const amount = Number(work.Amount || 0);\n\n    const quantity = qty > 0 ? qty : 1;\n    const unitPrice = Number((amount / quantity).toFixed(2));\n\n    return {\n      description: [\n  work.Project,\n  work.Work_Description,\n  work.Pricing_Type,\n  work.Unit\n]\n.filter(value =>\n  value &&\n  String(value).trim().toLowerCase() !== 'not specified' &&\n  String(value).trim().toLowerCase() !== 'item'\n)\n.join(' - '),\n      quantity,\n      unit_price: unitPrice\n    };\n  });\n\n  return {\n    json: {\n      ...data,\n      Invoice_Data: {\n        from: {\n          name: 'CAD Solutions'\n        },\n        to: {\n          name: data.Client_Name,\n          lines: [\n            data.Phone ? `Phone: ${data.Phone}` : '',\n            data.Email ? `Email: ${data.Email}` : ''\n          ].filter(Boolean)\n        },\n        invoice_number: `INV-${data.Billing_Period}-${data.Client_ID}`,\n        date: new Date().toISOString().slice(0, 10),\n        currency: 'INR',\n        items,\n        notes: 'Thank you for your business.'\n      },\n      PDF_FileName: `${data.Client_ID}_${data.Billing_Period}_Invoice.pdf`\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        512
+      ],
+      "id": "0c544a38-0db6-40f2-a75c-0d36246de782",
+      "name": "Prepare Invoice Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "59b4d85e-f4f4-4146-b68e-5d65574023d8",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Hi",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "f7b786a4-c04f-4d8b-9711-80cecabf0dc2",
+              "leftValue": "={{ $json.message.text }}",
+              "rightValue": "Hello",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        384
+      ],
+      "id": "2467877d-d1f3-4956-97ab-33cedcd55b8a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "\"Welcome to the DesigniX CAD Solutions Bot!!!\"",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        128
+      ],
+      "id": "41f6fdca-4d27-42d1-8e08-2683a6f7e801",
+      "name": "Send a text message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Client Details": {
+      "main": [
+        [
+          {
+            "node": "Get Monthly Work Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Monthly Work Records": {
+      "main": [
+        [
+          {
+            "node": "Calculate Client-Wise Billing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an invoice PDF": {
+      "main": [
+        [
+          {
+            "node": "Send a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Monthly Report History": {
+      "main": [
+        [
+          {
+            "node": "Prepare Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Client-Wise Billing": {
+      "main": [
+        [
+          {
+            "node": "Prepare Invoice Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Monthly Summary": {
+      "main": [
+        [
+          {
+            "node": "Send Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a document": {
+      "main": [
+        [
+          {
+            "node": "Save Monthly Report History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Invoice Data": {
+      "main": [
+        [
+          {
+            "node": "Generate an invoice PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Client Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}
