@@ -27,7 +27,7 @@ Detailed project documentation will be added progressively.
 6. [AI Attendance Intelligence Agent Using Airtable](./AI-Attendance-Intelligence-Agent-Using-Airtable/) — Student attendance analysis, classification, and automated intelligence reports.
 7. [Monthly Client Work & Billing Automation System](./Monthly-Client-Work-and-Billing-Automation-System/) — Automates client work-log tracking, billing calculations, PDF invoice generation, report history, and Telegram delivery.
 8. [AI Document Summarizer Agent](./AI-Document-Summarizer-Agent/) — Extracts and summarizes document content using AI.
-9. [AI Powered Personal Assistant in Telegram](./AI-Powered-Personal-Assistant-in-Telegram/) — Telegram-based personal assistant supporting text and audio interactions.
+9. [AI Powered Personal Assistant in Telegram](./AI-Powered-Personal-Assistant-in-Telegram/) — A conversational assistant supporting text and voice interactions, Gmail, Notion tasks, Google Calendar, and Google Contacts.
 10. [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) — Automates maintenance request handling and dispatch workflows.
 
 ## Technologies Used
