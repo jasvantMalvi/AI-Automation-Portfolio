@@ -89,3 +89,23 @@ AI-Maintenance-Dispatch/
 - GitHub: https://github.com/jasvantMalvi
 - LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
+## Project Files
+
+### n8n Workflows
+
+The project is divided into four workflows:
+
+1. [Maintenance Request Intake](workflows/WF01-Maintenance-Request-Intake.json)
+2. [AI Issue Analyzer](workflows/WF02-AI-Issue-Analyzer.json)
+3. [Technician Matching](workflows/WF03-Technician-Matching.json)
+4. [Status Validation](workflows/WF04-Status-Validation.json)
+
+### Workflow Screenshots
+
+View the workflow diagrams and execution evidence in the [Screenshots folder](screenshots/).
+
+### Setup
+
+Import the workflow JSON files into n8n individually. Configure your own credentials, Google Sheets connection, and webhook URLs before testing.
+
+**Note:** The current AI Issue Analyzer workflow uses a mock AI response on its active execution path. Refer to the workflow implementation before using it in a live environment.
