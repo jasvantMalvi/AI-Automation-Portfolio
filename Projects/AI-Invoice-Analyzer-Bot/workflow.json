@@ -1,0 +1,315 @@
+{
+  "name": "AI Invoice Analyzer Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -784,
+        -240
+      ],
+      "id": "fe1243ab-0343-41d6-bb22-2a456fd987b8",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "=Invoice.jpg",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -576,
+        -240
+      ],
+      "id": "a09fd5e9-2444-4f43-99d7-f20aac254191",
+      "name": "Get a message"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "You are an AI Invoice Analyzer.\n\nAnalyze the attached invoice image and extract only the main information.\n\nReturn ONLY valid JSON in the following format:\n\n{\n  \"vendor_name\": \"\",\n  \"invoice_number\": \"\",\n  \"invoice_date\": \"\",\n  \"due_date\": \"\",\n  \"customer_name\": \"\",\n  \"subtotal\": \"\",\n  \"discount\": \"\",\n  \"tax\": \"\",\n  \"total_amount\": \"\",\n  \"payment_method\": \"\",\n  \"currency\": \"\"\n}\n\nRules:\n- Extract only information visible in the invoice.\n- Do not guess missing values.\n- If a field is not available, return null.\n- Return only JSON without explanations or markdown.",
+        "inputType": "base64",
+        "binaryPropertyName": "Invoice.jpg0",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        -240
+      ],
+      "id": "f0b6f5ee-f9b1-4333-b25d-fd5297d07acc",
+      "name": "Analyze image"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the Invoice Data:\n\n\n{{ $json['0'].content[0].text }}",
+        "options": {
+          "systemMessage": "You are InvoiceGuard AI, an enterprise-grade Invoice Validation and Risk Analysis Assistant.\n\nYour role is to review structured invoice data extracted from an invoice image. Do NOT perform OCR or extract new information. Analyze only the data provided by the user.\n\nYour objectives are:\n\n• Verify invoice completeness.\n• Validate logical consistency.\n• Detect missing or suspicious information.\n• Assess invoice quality.\n• Estimate fraud risk based on available evidence.\n• Generate concise recommendations.\n• Produce structured JSON only.\n\n------------------------\nValidation Checks\n------------------------\n\nVerify the following fields:\n\nRequired\n- Vendor Name\n- Invoice Number\n- Invoice Date\n- Total Amount\n- Currency\n- Payment Method\n\nRecommended\n- Customer Name\n- Due Date\n- Subtotal\n- Tax\n\n------------------------\nConsistency Checks\n------------------------\n\nCheck for:\n\n- Total Amount is greater than zero.\n- Invoice Date is a valid date.\n- Due Date is not earlier than Invoice Date.\n- Tax is not greater than Total Amount.\n- Subtotal is not greater than Total Amount.\n- Currency format is valid.\n- Payment Method is specified.\n- Invoice Number is not empty.\n- Vendor Name appears legitimate (not blank or generic placeholders).\n\nDo not invent missing values.\n\n------------------------\nRisk Assessment\n------------------------\n\nRisk Levels\n\nLOW\n- Required fields present.\n- No inconsistencies detected.\n- Financial values appear logical.\n\nMEDIUM\n- One or more recommended fields missing.\n- Minor inconsistencies.\n- Manual review may be beneficial.\n\nHIGH\n- Missing required fields.\n- Invalid dates.\n- Impossible financial values.\n- Conflicting invoice information.\n- Empty or suspicious vendor information.\n\n------------------------\nValidation Status\n------------------------\n\nValid\nNeeds Review\nInvalid\n\nDecision Rules\n\nValid\n- All required fields available.\n- No critical inconsistencies.\n\nNeeds Review\n- Minor problems exist but invoice is usable.\n\nInvalid\n- Missing critical information or major inconsistencies detected.\n\n------------------------\nQuality Score\n------------------------\n\nCalculate an invoice quality score between 0 and 100.\n\n100 = Complete and internally consistent.\n\nReduce the score for:\n- Missing required fields\n- Missing recommended fields\n- Invalid financial values\n- Date inconsistencies\n- Suspicious vendor information\n\n------------------------\nFraud Indicators\n------------------------\n\nIdentify potential fraud indicators including:\n\n- Missing vendor details\n- Missing invoice number\n- Duplicate-looking invoice number\n- Negative or zero amount\n- Excessive tax\n- Date inconsistencies\n- Missing payment information\n\nOnly report indicators supported by the supplied data.\n\n------------------------\nRecommendations\n------------------------\n\nProvide short, actionable recommendations.\n\nExamples:\n\n- Verify vendor information.\n- Confirm payment details.\n- Review tax calculation.\n- Invoice is ready for approval.\n- Manual verification recommended.\n\n------------------------\nOutput Format\n------------------------\n\nReturn ONLY valid JSON.\n\n{\n  \"validation_status\": \"\",\n  \"risk_level\": \"\",\n  \"quality_score\": 0,\n  \"confidence_score\": \"\",\n  \"issues_found\": [],\n  \"fraud_indicators\": [],\n  \"recommendations\": [],\n  \"summary\": \"\"\n}\n\nRules\n\n- Never hallucinate.\n- Never assume missing values.\n- Never include markdown.\n- Never explain your reasoning.\n- Return only valid JSON.\n- Keep the summary under 40 words.\n- Keep recommendations concise.\n- Base every decision solely on the supplied invoice data."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -144,
+        -240
+      ],
+      "id": "fa484381-8afb-4e44-96e3-028165d425f8",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        -48
+      ],
+      "id": "95e38b4c-e869-488c-b127-0779562f34fb",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const validation = JSON.parse($input.first().json.output);\n\nconst score =\n  validation.risk_level === 'Low'\n    ? '95/100'\n    : validation.risk_level === 'Medium'\n    ? '70/100'\n    : '40/100';\n\nconst issues =\n  Array.isArray(validation.issues_found) && validation.issues_found.length\n    ? validation.issues_found.join(\"<br>• \")\n    : \"No Issues Found\";\n\nconst recommendations =\n  Array.isArray(validation.recommendations) && validation.recommendations.length\n    ? validation.recommendations.join(\"<br>• \")\n    : \"No Recommendations\";\n\nreturn [{\n  json:{\n      validation_status: validation.validation_status,\n      risk_level: validation.risk_level,\n      issues_found: issues,\n      recommendation: recommendations,\n      report_html: `\n<div style=\"font-family:Arial,sans-serif;background:#f4f7fb;padding:30px;\">\n\n<div style=\"max-width:700px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;\">\n\n<!-- Header -->\n\n<div style=\"background:#2563eb;padding:25px;text-align:center;color:white;\">\n<h1 style=\"margin:0;font-size:30px;\">\n📄 Invoice Validation Report\n</h1>\n<p style=\"margin-top:10px;font-size:16px;\">\nAI-Powered Invoice Analyzer Agent\n</p>\n</div>\n\n<div style=\"padding:25px;\">\n\n<!-- Executive Summary -->\n\n<h2 style=\"color:#2563eb;\">\n📊 Executive Summary\n</h2>\n\n<table width=\"100%\" cellpadding=\"12\" cellspacing=\"0\"\nstyle=\"border-collapse:collapse;font-size:18px;\">\n\n<tr style=\"background:#f8fafc;\">\n<td><b>Validation Status</b></td>\n<td>✅ ${validation.validation_status}</td>\n</tr>\n\n<tr>\n<td><b>Risk Level</b></td>\n<td>🟢 ${validation.risk_level}</td>\n</tr>\n\n<tr style=\"background:#f8fafc;\">\n<td><b>Confidence Score</b></td>\n<td>⭐ ${score}</td>\n</tr>\n\n<tr>\n<td><b>Issues Found</b></td>\n<td>${issues}</td>\n</tr>\n\n</table>\n\n<!-- Validation Result -->\n\n<div style=\"\nmargin-top:25px;\nbackground:#ecfdf5;\npadding:20px;\nborder-left:5px solid #22c55e;\nborder-radius:8px;\n\">\n\n<h2 style=\"margin-top:0;color:#16a34a;\">\n🟢 Validation Result\n</h2>\n\n<p style=\"font-size:18px;line-height:1.8;\">\nInvoice successfully validated and analyzed.\n</p>\n\n</div>\n\n<!-- Risk Analysis -->\n\n<div style=\"\nmargin-top:25px;\nbackground:#ffffff;\nborder:1px solid #e5e7eb;\npadding:20px;\nborder-radius:8px;\n\">\n\n<h2 style=\"margin-top:0;color:#2563eb;\">\n📋 Risk Analysis\n</h2>\n\n<table width=\"100%\" cellpadding=\"12\" cellspacing=\"0\"\nstyle=\"border-collapse:collapse;font-size:17px;\">\n\n<tr>\n<td>Invoice Structure</td>\n<td>✅ Passed</td>\n</tr>\n\n<tr>\n<td>Data Extraction</td>\n<td>✅ Passed</td>\n</tr>\n\n<tr>\n<td>Risk Level</td>\n<td>${validation.risk_level}</td>\n</tr>\n\n<tr>\n<td>Issues Found</td>\n<td>${issues}</td>\n</tr>\n\n</table>\n\n</div>\n\n<!-- Recommendation -->\n\n<div style=\"\nmargin-top:25px;\nbackground:#eff6ff;\npadding:20px;\nborder-left:5px solid #2563eb;\nborder-radius:8px;\n\">\n\n<h2 style=\"margin-top:0;color:#2563eb;\">\n💡 Recommendation\n</h2>\n\n<p style=\"font-size:18px;line-height:1.8;\">\n${recommendations}\n</p>\n\n</div>\n\n</div>\n\n<!-- Footer -->\n\n<div style=\"\nbackground:#f8fafc;\npadding:20px;\ntext-align:center;\nfont-size:14px;\ncolor:#64748b;\n\">\n\nGenerated by AI Invoice Analyzer Agent\n<br><br>\nPowered by OpenAI + n8n\n\n</div>\n\n</div>\n\n</div>\n`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -240
+      ],
+      "id": "05cb735f-de2f-41ed-9e77-d91941748c5f",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Google Sheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Validation_Status": "={{ $json.validation_status }}",
+            "Risk_Level": "={{ $json.risk_level }}",
+            "Issues_Found": "={{ $json.issues_found }}",
+            "Recommendations": "={{ $json.recommendation }}",
+            "Processed_At": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Validation_Status",
+              "displayName": "Validation_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Risk_Level",
+              "displayName": "Risk_Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Issues_Found",
+              "displayName": "Issues_Found",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Recommendations",
+              "displayName": "Recommendations",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Processed_At",
+              "displayName": "Processed_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        -240
+      ],
+      "id": "f76f2632-1121-47ba-974a-8c5799abc663",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.From }}",
+        "subject": "Your Invoice is Analyzed!!!",
+        "message": "={{ $('Code in JavaScript').item.json.report_html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        624,
+        -240
+      ],
+      "id": "db756994-e99b-4bad-83c6-73f0c0f0d1e7",
+      "name": "Send a message"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
