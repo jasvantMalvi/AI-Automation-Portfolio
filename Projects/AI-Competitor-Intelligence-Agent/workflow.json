@@ -1,0 +1,902 @@
+{
+  "name": "AI Competitor Intelligence Agent - Weekly Trial (Reliance Tata Adani)",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (!items.length) {\n  throw new Error(\"No competitor intelligence data found.\");\n}\n\nconst competitors = items\n  .map(item => item.json)\n  .sort((a, b) => Number(a.competitor_id) - Number(b.competitor_id));\n\nreturn [\n  {\n    json: {\n      run_id: competitors[0].run_id,\n      report_date: competitors[0].report_date,\n      competitor_count: competitors.length,\n      competitors\n    }\n  }\n];"
+      },
+      "id": "f94306e4-62d4-4d7b-8078-794558c877d4",
+      "name": "Aggregate All Competitors",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2976,
+        -400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const aggregate = $('Aggregate All Competitors').item.json;\n\nconst competitors = aggregate.competitors || [];\n\n\n// ======================================================\n// HELPERS\n// ======================================================\n\nconst safe = (value) => {\n  return String(value ?? \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#39;\");\n};\n\n\n// Convert AI output into a clean object\nfunction parseAI(value) {\n\n  if (value === null || value === undefined || value === \"\") {\n    return {};\n  }\n\n  // Already object\n  if (typeof value === \"object\") {\n\n    // Handle array like [{...}]\n    if (Array.isArray(value)) {\n      if (value.length === 1 && typeof value[0] === \"object\") {\n        return value[0];\n      }\n\n      return {\n        value: value\n      };\n    }\n\n    return value;\n  }\n\n  // String\n  if (typeof value === \"string\") {\n\n    let text = value.trim();\n\n    // Remove markdown code fences if AI adds them\n    text = text\n      .replace(/^```json\\s*/i, \"\")\n      .replace(/^```\\s*/i, \"\")\n      .replace(/\\s*```$/i, \"\")\n      .trim();\n\n    // Try parsing JSON\n    try {\n      const parsed = JSON.parse(text);\n\n      if (Array.isArray(parsed)) {\n        if (parsed.length === 1 && typeof parsed[0] === \"object\") {\n          return parsed[0];\n        }\n\n        return {\n          value: parsed\n        };\n      }\n\n      if (typeof parsed === \"object\") {\n        return parsed;\n      }\n\n    } catch (e) {\n      // Not JSON, return as plain text\n      return {\n        text: text\n      };\n    }\n\n    return {\n      text: text\n    };\n  }\n\n  return {\n    text: String(value)\n  };\n}\n\n\n// Convert AI data into readable text for Google Sheets\nfunction readableText(value) {\n\n  const obj = parseAI(value);\n\n  if (obj.text) {\n    return obj.text;\n  }\n\n  if (obj.value) {\n    return Array.isArray(obj.value)\n      ? obj.value.join(\"; \")\n      : String(obj.value);\n  }\n\n  return Object.entries(obj)\n    .map(([key, value]) => {\n\n      let cleanKey = key\n        .replace(/_/g, \" \")\n        .replace(/\\b\\w/g, c => c.toUpperCase());\n\n      if (Array.isArray(value)) {\n        value = value.join(\"; \");\n      }\n\n      return `${cleanKey}: ${value}`;\n    })\n    .join(\" | \");\n}\n\n\n// ======================================================\n// HTML HELPERS\n// ======================================================\n\nfunction section(title, content, background = \"#f8fafc\") {\n\n  if (!content) return \"\";\n\n  return `\n  <div style=\"\n    margin-top:14px;\n    padding:16px;\n    background:${background};\n    border:1px solid #e5e7eb;\n    border-radius:10px;\n  \">\n    <div style=\"\n      font-size:13px;\n      font-weight:700;\n      color:#374151;\n      margin-bottom:8px;\n      text-transform:uppercase;\n      letter-spacing:.4px;\n    \">\n      ${safe(title)}\n    </div>\n\n    <div style=\"\n      font-size:14px;\n      line-height:1.65;\n      color:#4b5563;\n    \">\n      ${safe(content)}\n    </div>\n  </div>\n  `;\n}\n\n\n// ======================================================\n// REVIEW ANALYSIS HTML\n// ======================================================\n\nfunction renderReviewAnalysis(data) {\n\n  const obj = parseAI(data);\n\n  if (obj.text) {\n    return section(\"Analysis\", obj.text);\n  }\n\n  return `\n  ${section(\"Top Strengths\", obj.top_strengths, \"#f0fdf4\")}\n\n  ${section(\"Top Weaknesses\", obj.top_weaknesses, \"#fff7ed\")}\n\n  ${section(\"Common Complaints\", obj.common_complaints, \"#fef2f2\")}\n\n  ${section(\"Positive Themes\", obj.positive_themes, \"#f0fdf4\")}\n\n  ${section(\"Negative Themes\", obj.negative_themes, \"#fef2f2\")}\n\n  ${section(\"Overall Summary\", obj.overall_summary, \"#f8fafc\")}\n  `;\n}\n\n\n// ======================================================\n// SENTIMENT HTML\n// ======================================================\n\nfunction renderSentiment(data) {\n\n  const obj = parseAI(data);\n\n  if (obj.text) {\n    return section(\"Sentiment Analysis\", obj.text, \"#faf5ff\");\n  }\n\n  const positive = Number(obj.positive_percentage || 0);\n  const neutral = Number(obj.neutral_percentage || 0);\n  const negative = Number(obj.negative_percentage || 0);\n\n  return `\n\n  <div style=\"\n    margin-top:14px;\n    padding:18px;\n    background:#faf5ff;\n    border:1px solid #e9d5ff;\n    border-radius:12px;\n  \">\n\n    <div style=\"\n      font-size:16px;\n      font-weight:700;\n      color:#6d28d9;\n      margin-bottom:14px;\n    \">\n      ${safe(obj.overall_sentiment || \"Overall Sentiment\")}\n    </div>\n\n\n    <!-- SENTIMENT BARS -->\n\n    <div style=\"margin-bottom:14px\">\n\n      <div style=\"\n        display:flex;\n        justify-content:space-between;\n        font-size:12px;\n        margin-bottom:5px;\n        color:#374151;\n      \">\n        <span>Positive</span>\n        <strong>${positive}%</strong>\n      </div>\n\n      <div style=\"\n        height:8px;\n        background:#e5e7eb;\n        border-radius:20px;\n        overflow:hidden;\n      \">\n        <div style=\"\n          width:${positive}%;\n          height:100%;\n          background:#22c55e;\n        \"></div>\n      </div>\n\n    </div>\n\n\n    <div style=\"margin-bottom:14px\">\n\n      <div style=\"\n        display:flex;\n        justify-content:space-between;\n        font-size:12px;\n        margin-bottom:5px;\n        color:#374151;\n      \">\n        <span>Neutral</span>\n        <strong>${neutral}%</strong>\n      </div>\n\n      <div style=\"\n        height:8px;\n        background:#e5e7eb;\n        border-radius:20px;\n        overflow:hidden;\n      \">\n        <div style=\"\n          width:${neutral}%;\n          height:100%;\n          background:#f59e0b;\n        \"></div>\n      </div>\n\n    </div>\n\n\n    <div style=\"margin-bottom:16px\">\n\n      <div style=\"\n        display:flex;\n        justify-content:space-between;\n        font-size:12px;\n        margin-bottom:5px;\n        color:#374151;\n      \">\n        <span>Negative</span>\n        <strong>${negative}%</strong>\n      </div>\n\n      <div style=\"\n        height:8px;\n        background:#e5e7eb;\n        border-radius:20px;\n        overflow:hidden;\n      \">\n        <div style=\"\n          width:${negative}%;\n          height:100%;\n          background:#ef4444;\n        \"></div>\n      </div>\n\n    </div>\n\n\n    ${section(\n      \"Positive Keywords\",\n      obj.top_positive_keywords,\n      \"#f0fdf4\"\n    )}\n\n    ${section(\n      \"Negative Keywords\",\n      obj.top_negative_keywords,\n      \"#fef2f2\"\n    )}\n\n    ${section(\n      \"Sentiment Summary\",\n      obj.sentiment_summary,\n      \"#ffffff\"\n    )}\n\n  </div>\n  `;\n}\n\n\n// ======================================================\n// SWOT HTML\n// ======================================================\n\nfunction renderSWOT(data) {\n\n  const obj = parseAI(data);\n\n  if (obj.text) {\n    return section(\"SWOT Analysis\", obj.text, \"#ecfdf5\");\n  }\n\n  return `\n\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:14px\">\n\n    <tr>\n\n      <td width=\"50%\" valign=\"top\" style=\"padding-right:7px\">\n\n        <div style=\"\n          background:#f0fdf4;\n          border:1px solid #bbf7d0;\n          border-radius:10px;\n          padding:16px;\n          margin-bottom:10px;\n        \">\n\n          <div style=\"\n            font-size:14px;\n            font-weight:700;\n            color:#166534;\n            margin-bottom:8px;\n          \">\n            💪 Strengths\n          </div>\n\n          <div style=\"\n            font-size:13px;\n            line-height:1.6;\n            color:#374151;\n          \">\n            ${safe(obj.strengths || \"—\")}\n          </div>\n\n        </div>\n\n      </td>\n\n\n      <td width=\"50%\" valign=\"top\" style=\"padding-left:7px\">\n\n        <div style=\"\n          background:#fef2f2;\n          border:1px solid #fecaca;\n          border-radius:10px;\n          padding:16px;\n          margin-bottom:10px;\n        \">\n\n          <div style=\"\n            font-size:14px;\n            font-weight:700;\n            color:#991b1b;\n            margin-bottom:8px;\n          \">\n            ⚠️ Weaknesses\n          </div>\n\n          <div style=\"\n            font-size:13px;\n            line-height:1.6;\n            color:#374151;\n          \">\n            ${safe(obj.weaknesses || \"—\")}\n          </div>\n\n        </div>\n\n      </td>\n\n    </tr>\n\n\n    <tr>\n\n      <td width=\"50%\" valign=\"top\" style=\"padding-right:7px\">\n\n        <div style=\"\n          background:#eff6ff;\n          border:1px solid #bfdbfe;\n          border-radius:10px;\n          padding:16px;\n        \">\n\n          <div style=\"\n            font-size:14px;\n            font-weight:700;\n            color:#1d4ed8;\n            margin-bottom:8px;\n          \">\n            🚀 Opportunities\n          </div>\n\n          <div style=\"\n            font-size:13px;\n            line-height:1.6;\n            color:#374151;\n          \">\n            ${safe(obj.opportunities || \"—\")}\n          </div>\n\n        </div>\n\n      </td>\n\n\n      <td width=\"50%\" valign=\"top\" style=\"padding-left:7px\">\n\n        <div style=\"\n          background:#fff7ed;\n          border:1px solid #fed7aa;\n          border-radius:10px;\n          padding:16px;\n        \">\n\n          <div style=\"\n            font-size:14px;\n            font-weight:700;\n            color:#c2410c;\n            margin-bottom:8px;\n          \">\n            🔥 Threats\n          </div>\n\n          <div style=\"\n            font-size:13px;\n            line-height:1.6;\n            color:#374151;\n          \">\n            ${safe(obj.threats || \"—\")}\n          </div>\n\n        </div>\n\n      </td>\n\n    </tr>\n\n  </table>\n\n\n  ${section(\n    \"SWOT Summary\",\n    obj.swot_summary,\n    \"#f8fafc\"\n  )}\n\n  `;\n}\n\n\n// ======================================================\n// COMPETITOR CARDS\n// ======================================================\n\nconst cards = competitors.map((c, i) => {\n\n  return `\n\n  <div style=\"\n    margin-bottom:24px;\n    border:1px solid #e5e7eb;\n    border-radius:16px;\n    overflow:hidden;\n    background:#ffffff;\n  \">\n\n    <!-- CARD HEADER -->\n\n    <div style=\"\n      padding:20px 22px;\n      background:#f8fafc;\n      border-bottom:1px solid #e5e7eb;\n    \">\n\n      <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n\n        <tr>\n\n          <td>\n\n            <div style=\"\n              font-size:20px;\n              font-weight:700;\n              color:#111827;\n            \">\n              🏢 ${safe(c.competitor_name)}\n            </div>\n\n            <div style=\"\n              margin-top:5px;\n              font-size:12px;\n              color:#6b7280;\n            \">\n              Competitor ${i + 1} &nbsp;•&nbsp;\n              ${safe(c.review_count)} review signals\n            </div>\n\n          </td>\n\n          <td align=\"right\">\n\n            <div style=\"\n              display:inline-block;\n              padding:6px 10px;\n              background:#eef2ff;\n              color:#4338ca;\n              border-radius:20px;\n              font-size:11px;\n              font-weight:700;\n            \">\n              INTELLIGENCE\n            </div>\n\n          </td>\n\n        </tr>\n\n      </table>\n\n    </div>\n\n\n    <!-- REVIEW -->\n\n    <div style=\"padding:20px 22px\">\n\n      <div style=\"\n        font-size:15px;\n        font-weight:700;\n        color:#2563eb;\n        margin-bottom:8px;\n      \">\n        🔎 Review Analysis\n      </div>\n\n      ${renderReviewAnalysis(c.review_analysis)}\n\n\n      <!-- SENTIMENT -->\n\n      <div style=\"\n        margin-top:24px;\n        font-size:15px;\n        font-weight:700;\n        color:#7c3aed;\n        margin-bottom:8px;\n      \">\n        😊 Sentiment Analysis\n      </div>\n\n      ${renderSentiment(c.sentiment_analysis)}\n\n\n      <!-- SWOT -->\n\n      <div style=\"\n        margin-top:24px;\n        font-size:15px;\n        font-weight:700;\n        color:#059669;\n        margin-bottom:8px;\n      \">\n        📊 SWOT Analysis\n      </div>\n\n      ${renderSWOT(c.swot_analysis)}\n\n    </div>\n\n  </div>\n\n  `;\n\n}).join(\"\");\n\n\n// ======================================================\n// COMPETITOR COMPARISON\n// ======================================================\n\nconst comparison = parseAI(\n  $('Competitor Comparison Agent1').item.json.output\n);\n\n\nconst comparisonHTML = `\n\n<div style=\"\n  margin-top:8px;\n  border:1px solid #bfdbfe;\n  border-radius:16px;\n  overflow:hidden;\n  background:#ffffff;\n\">\n\n  <div style=\"\n    padding:20px 22px;\n    background:#eff6ff;\n    border-bottom:1px solid #bfdbfe;\n  \">\n\n    <div style=\"\n      font-size:21px;\n      font-weight:700;\n      color:#1e3a8a;\n    \">\n      ⚔️ Competitor Comparison\n    </div>\n\n    <div style=\"\n      margin-top:5px;\n      font-size:12px;\n      color:#64748b;\n    \">\n      Cross-competitor intelligence summary\n    </div>\n\n  </div>\n\n\n  <div style=\"padding:20px 22px\">\n\n    ${section(\n      \"Executive Summary\",\n      comparison.executive_summary,\n      \"#f8fafc\"\n    )}\n\n    ${section(\n      \"Competitor Summaries\",\n      comparison.competitor_summaries,\n      \"#f8fafc\"\n    )}\n\n    ${section(\n      \"Key Differences\",\n      comparison.key_differences,\n      \"#eff6ff\"\n    )}\n\n    ${section(\n      \"Common Strengths\",\n      comparison.common_strengths,\n      \"#f0fdf4\"\n    )}\n\n    ${section(\n      \"Common Weaknesses\",\n      comparison.common_weaknesses,\n      \"#fef2f2\"\n    )}\n\n    ${section(\n      \"Customer Patterns\",\n      comparison.cross_competitor_customer_patterns,\n      \"#faf5ff\"\n    )}\n\n    ${section(\n      \"Differentiation Opportunities\",\n      comparison.differentiation_opportunities,\n      \"#eff6ff\"\n    )}\n\n    ${section(\n      \"Strategic Recommendations\",\n      comparison.strategic_recommendations,\n      \"#f0fdf4\"\n    )}\n\n    ${section(\n      \"Data Limitations\",\n      comparison.data_limitations,\n      \"#fff7ed\"\n    )}\n\n  </div>\n\n</div>\n\n`;\n\n\n// ======================================================\n// FULL HTML EMAIL\n// ======================================================\n\nconst html = `\n\n<!DOCTYPE html>\n\n<html>\n\n<head>\n\n<meta charset=\"UTF-8\">\n\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n\n<title>Weekly Competitor Intelligence</title>\n\n</head>\n\n\n<body style=\"\n  margin:0;\n  padding:0;\n  background:#f3f4f6;\n  font-family:Arial,Helvetica,sans-serif;\n  color:#111827;\n\">\n\n\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f4f6\">\n\n<tr>\n\n<td align=\"center\" style=\"padding:30px 12px\">\n\n\n<table width=\"900\" cellpadding=\"0\" cellspacing=\"0\"\nstyle=\"\n  max-width:900px;\n  width:100%;\n  background:#ffffff;\n  border-radius:18px;\n  overflow:hidden;\n  box-shadow:0 8px 30px rgba(0,0,0,.08);\n\">\n\n\n<!-- ================================================= -->\n<!-- HEADER -->\n<!-- ================================================= -->\n\n<tr>\n\n<td style=\"\n  background:#111827;\n  padding:30px 32px;\n\">\n\n  <div style=\"\n    font-size:27px;\n    font-weight:700;\n    color:#ffffff;\n  \">\n    📊 Weekly Competitor Intelligence\n  </div>\n\n\n  <div style=\"\n    margin-top:8px;\n    font-size:13px;\n    color:#cbd5e1;\n  \">\n    Review Intelligence &nbsp;•&nbsp;\n    Sentiment Analysis &nbsp;•&nbsp;\n    SWOT &nbsp;•&nbsp;\n    Competitive Comparison\n  </div>\n\n\n  <div style=\"\n    margin-top:20px;\n    font-size:12px;\n    color:#94a3b8;\n  \">\n\n    Report Date:\n    <strong style=\"color:#e2e8f0\">\n      ${safe(aggregate.report_date)}\n    </strong>\n\n    &nbsp;&nbsp; | &nbsp;&nbsp;\n\n    Competitors Analyzed:\n    <strong style=\"color:#e2e8f0\">\n      ${safe(aggregate.competitor_count)}\n    </strong>\n\n  </div>\n\n</td>\n\n</tr>\n\n\n<!-- ================================================= -->\n<!-- CONTENT -->\n<!-- ================================================= -->\n\n<tr>\n\n<td style=\"padding:28px\">\n\n  ${cards}\n\n  ${comparisonHTML}\n\n\n  <!-- DATA SOURCE NOTICE -->\n\n  <div style=\"\n    margin-top:24px;\n    padding:16px;\n    background:#f8fafc;\n    border:1px solid #e5e7eb;\n    border-radius:12px;\n  \">\n\n    <div style=\"\n      font-size:12px;\n      font-weight:700;\n      color:#475569;\n      margin-bottom:5px;\n    \">\n      ℹ️ Data & Methodology\n    </div>\n\n    <div style=\"\n      font-size:11px;\n      line-height:1.6;\n      color:#64748b;\n    \">\n      This report was generated automatically by the AI Competitor\n      Intelligence Agent. The current trial run uses synthetic test data.\n      Replace the temporary dataset with a verified review source before\n      using the report for real business decisions.\n    </div>\n\n  </div>\n\n</td>\n\n</tr>\n\n\n<!-- ================================================= -->\n<!-- FOOTER -->\n<!-- ================================================= -->\n\n<tr>\n\n<td style=\"\n  padding:18px 28px;\n  background:#f8fafc;\n  border-top:1px solid #e5e7eb;\n  text-align:center;\n\">\n\n  <div style=\"\n    font-size:11px;\n    color:#94a3b8;\n  \">\n    Automatically generated by\n    <strong>AI Competitor Intelligence Agent</strong>\n  </div>\n\n</td>\n\n</tr>\n\n\n</table>\n\n</td>\n\n</tr>\n\n</table>\n\n\n</body>\n\n</html>\n`;\n\n\n// ======================================================\n// GOOGLE SHEETS DATA\n// ======================================================\n\nconst byId = {};\n\nfor (const c of competitors) {\n  byId[c.competitor_id] = c;\n}\n\n\n// ======================================================\n// RETURN\n// ======================================================\n\nreturn [\n\n  {\n\n    json: {\n\n      run_id: aggregate.run_id,\n\n      report_date: aggregate.report_date,\n\n      competitor_count: aggregate.competitor_count,\n\n\n      // COMPETITOR 1\n      competitor_1: byId[1]?.competitor_name || \"\",\n\n      competitor_1_review_analysis:\n        readableText(byId[1]?.review_analysis),\n\n      competitor_1_sentiment:\n        readableText(byId[1]?.sentiment_analysis),\n\n      competitor_1_swot:\n        readableText(byId[1]?.swot_analysis),\n\n\n      // COMPETITOR 2\n      competitor_2: byId[2]?.competitor_name || \"\",\n\n      competitor_2_review_analysis:\n        readableText(byId[2]?.review_analysis),\n\n      competitor_2_sentiment:\n        readableText(byId[2]?.sentiment_analysis),\n\n      competitor_2_swot:\n        readableText(byId[2]?.swot_analysis),\n\n\n      // COMPETITOR 3\n      competitor_3: byId[3]?.competitor_name || \"\",\n\n      competitor_3_review_analysis:\n        readableText(byId[3]?.review_analysis),\n\n      competitor_3_sentiment:\n        readableText(byId[3]?.sentiment_analysis),\n\n      competitor_3_swot:\n        readableText(byId[3]?.swot_analysis),\n\n\n      // COMPARISON\n      comparison_report:\n        readableText(comparison),\n\n\n      // EMAIL\n      email_subject:\n        `Weekly Competitor Intelligence - ${\n          new Date(aggregate.report_date)\n            .toLocaleDateString(\"en-IN\")\n        }`,\n\n      html_report: html\n\n    }\n\n  }\n\n];"
+      },
+      "id": "4c734025-2e2e-46c1-b1b5-b77bec97b651",
+      "name": "Final Report + Sheet Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3632,
+        -160
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "YOUR_SHEET_TAB_NAME"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Run_ID": "={{ $json.run_id }}",
+            "Report_Date": "={{ $json.report_date }}",
+            "Competitor_1": "={{ $json.competitor_1 }}",
+            "Competitor_1_Review_Analysis": "={{ $json.competitor_1_review_analysis }}",
+            "Competitor_1_Sentiment": "={{ $json.competitor_1_sentiment }}",
+            "Competitor_1_SWOT": "={{ $json.competitor_1_swot }}",
+            "Competitor_2": "={{ $json.competitor_2 }}",
+            "Competitor_2_Review_Analysis": "={{ $json.competitor_2_review_analysis }}",
+            "Competitor_2_Sentiment": "={{ $json.competitor_2_sentiment }}",
+            "Competitor_2_SWOT": "={{ $json.competitor_2_swot }}",
+            "Competitor_3": "={{ $json.competitor_3 }}",
+            "Competitor_3_Review_Analysis": "={{ $json.competitor_3_review_analysis }}",
+            "Competitor_3_Sentiment": "={{ $json.competitor_3_sentiment }}",
+            "Competitor_3_SWOT": "={{ $json.competitor_3_swot }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Run_ID",
+              "displayName": "Run_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Report_Date",
+              "displayName": "Report_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_1",
+              "displayName": "Competitor_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_1_Review_Analysis",
+              "displayName": "Competitor_1_Review_Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_1_Sentiment",
+              "displayName": "Competitor_1_Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_1_SWOT",
+              "displayName": "Competitor_1_SWOT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_2",
+              "displayName": "Competitor_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_2_Review_Analysis",
+              "displayName": "Competitor_2_Review_Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_2_Sentiment",
+              "displayName": "Competitor_2_Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_2_SWOT",
+              "displayName": "Competitor_2_SWOT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_3",
+              "displayName": "Competitor_3",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_3_Review_Analysis",
+              "displayName": "Competitor_3_Review_Analysis",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_3_Sentiment",
+              "displayName": "Competitor_3_Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Competitor_3_SWOT",
+              "displayName": "Competitor_3_SWOT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e4616463-dfb0-41f8-aff3-32dea8495819",
+      "name": "Save Weekly Report to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        3872,
+        -288
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL_ADDRESS",
+        "subject": "={{ $json.email_subject }}",
+        "message": "={{ $json.html_report }}",
+        "options": {}
+      },
+      "id": "8b8a9c90-8f39-416f-93f7-1eff072d0a67",
+      "name": "Send Attractive HTML Gmail Report",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        3872,
+        0
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Competitor:\n{{ $('📝 Review Data').item.json.competitor_name }}\n\nReviews:\n{{ JSON.stringify($('📝 Review Data').item.json.reviews) }}\n\nAnalyze the sentiment of ONLY these supplied reviews.\n\nCalculate:\n- Overall sentiment\n- Positive percentage\n- Neutral percentage\n- Negative percentage\n- Top positive keywords\n- Top negative keywords\n- Sentiment summary\n\nRules:\n- Use only the supplied reviews.\n- Do not use external knowledge.\n- Do not invent facts.\n- Percentages must be calculated from the supplied reviews.\n- Positive + Neutral + Negative percentages must equal 100.\n- top_positive_keywords and top_negative_keywords must be strings.\n- Separate multiple keywords with semicolons.\n- competitor must exactly match the supplied competitor name.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Sentiment Analysis Agent.\n\nAnalyze sentiment only from the reviews supplied by the workflow.\n\nRules:\n- Do not use outside knowledge.\n- Do not invent sentiment or percentages.\n- Calculate percentages from the supplied reviews.\n- Positive, neutral, and negative percentages must total 100.\n- Keep the analysis concise.\n- Follow the required structured output format exactly."
+        }
+      },
+      "id": "ce637544-c43a-46dc-ac5e-3f1b201baef3",
+      "name": "Sentiment Analysis Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2160,
+        -160
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Competitor:\n{{ $('📝 Review Data').item.json.competitor_name }}\n\nReview Analysis:\n{{ JSON.stringify($('Review Analysis Agent1').item.json.output) }}\n\nSentiment Analysis:\n{{ JSON.stringify($('Sentiment Analysis Agent1').item.json.output) }}\n\nCreate a concise SWOT analysis using ONLY the supplied Review Analysis and Sentiment Analysis.\n\nIdentify:\n- Strengths\n- Weaknesses\n- Opportunities\n- Threats\n- SWOT summary\n\nRules:\n- Use only the supplied analysis.\n- Do not use external knowledge.\n- Do not invent facts.\n- Strengths and weaknesses must be supported by the supplied evidence.\n- Opportunities and threats may be reasonable inferences from the supplied evidence.\n- Mark inferred opportunities or threats as inference when appropriate.\n- All fields must be strings.\n- Separate multiple points with semicolons.\n- competitor must exactly match the supplied competitor name.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a SWOT Analysis Agent.\n\nAnalyze the supplied Review Analysis and Sentiment Analysis.\n\nRules:\n- Use only the supplied information.\n- Do not use external knowledge.\n- Do not invent facts.\n- Strengths and weaknesses must come from the supplied evidence.\n- Opportunities and threats may be reasonable inferences from the supplied evidence.\n- Clearly identify inferred opportunities or threats.\n- Keep the output concise.\n- Follow the Structured Output Parser format exactly."
+        }
+      },
+      "id": "a2dd95f8-dc65-4386-916e-fd339bcc78c5",
+      "name": "SWOT Analysis Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        2448,
+        -160
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('📝 Review Data').item.json;\n\nfunction toText(value) {\n  if (value === null || value === undefined) {\n    return \"\";\n  }\n\n  if (typeof value === \"string\") {\n    return value;\n  }\n\n  return JSON.stringify(value);\n}\n\nconst review = $('Review Analysis Agent1').item.json.output;\nconst sentiment = $('Sentiment Analysis Agent1').item.json.output;\nconst swot = $('SWOT Analysis Agent1').item.json.output;\n\nreturn [\n  {\n    json: {\n      run_id: base.run_id,\n      report_date: base.report_date,\n      competitor_id: base.competitor_id,\n      competitor_name: base.competitor_name,\n      review_count: base.review_count,\n      data_source: base.data_source,\n\n      review_analysis: toText(review),\n      sentiment_analysis: toText(sentiment),\n      swot_analysis: toText(swot)\n    }\n  }\n];"
+      },
+      "id": "dafdaa60-9ffe-4ee6-a08f-830dbe151168",
+      "name": "Normalize Competitor Intelligence1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2784,
+        -160
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Competitor Intelligence:\n\n{{ JSON.stringify($json.competitors) }}\n\nCompare all supplied competitors using ONLY the information provided.\n\nAnalyze:\n\n- Executive summary\n- Competitor summaries\n- Key differences\n- Common strengths\n- Common weaknesses\n- Cross-competitor customer patterns\n- Differentiation opportunities\n- Strategic recommendations\n- Data limitations\n\nRules:\n\n- Use only the supplied competitor intelligence.\n- Do not use external knowledge.\n- Do not invent facts.\n- Do not declare a winner.\n- Do not create rankings.\n- Keep the comparison concise and evidence-based.\n- All output fields must be strings.\n- Separate multiple points with semicolons.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Competitive Intelligence Comparison Agent.\n\nCompare the supplied competitors using only their provided intelligence.\n\nRules:\n- Use only supplied evidence.\n- Do not use outside knowledge.\n- Never fabricate facts.\n- Do not declare a winner.\n- Do not create rankings.\n- Identify meaningful differences and common customer patterns.\n- Keep recommendations directly connected to the supplied evidence.\n- Keep the output concise and business-focused.\n- Follow the required structured output format exactly."
+        }
+      },
+      "id": "f74acf98-12ec-4beb-81fb-74a936db9dfe",
+      "name": "Competitor Comparison Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        3280,
+        -160
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "69fd0219-93ef-4fee-9898-fb988754fe01",
+      "name": "Weekly Schedule Trigger2",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        1120,
+        -160
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "jsCode": "// TEMPORARY TEST DATA\n// Replace this node later with your live competitor/review data source.\n//\n// These are controlled sample review signals for workflow testing only.\n// They are NOT claimed to be real customer reviews.\n\nconst competitors = [\n  {\n    competitor_id: 1,\n    competitor_name: \"Reliance\",\n    search_query: \"Reliance Industries customer reviews\"\n  },\n  {\n    competitor_id: 2,\n    competitor_name: \"Tata\",\n    search_query: \"Tata Group customer reviews\"\n  },\n  {\n    competitor_id: 3,\n    competitor_name: \"Adani\",\n    search_query: \"Adani Group customer reviews\"\n  }\n];\n\nconst runId = `CI-${new Date().toISOString().replace(/\\\\D/g,'').slice(0,14)}`;\n\nreturn competitors.map(c => ({\n  json: {\n    run_id: runId,\n    report_date: new Date().toISOString(),\n    ...c\n  }\n}));"
+      },
+      "id": "2076f855-2429-4045-95b9-36e48756e26a",
+      "name": "⚙️ Competitor Configuration",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1344,
+        -160
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// TEMPORARY CONTROLLED REVIEW DATA FOR TESTING.\n// This makes the workflow runnable without an external review API.\n//\n// IMPORTANT: These are synthetic test reviews, not real reviews.\n// Replace this node with a real review source before using the report\n// for actual business decisions.\n\nconst reviews = {\n  \"Reliance\": [\n    {text:\"Large and well-known business group with a wide range of services.\", stars:5},\n    {text:\"Customers appreciate the scale and availability of services.\", stars:4},\n    {text:\"Some customers mention that service experiences can vary by business unit.\", stars:3},\n    {text:\"Pricing and support experiences are not always consistent.\", stars:3}\n  ],\n  \"Tata\": [\n    {text:\"Strong reputation and broad range of products and services.\", stars:5},\n    {text:\"Customers often mention trust and established service networks.\", stars:5},\n    {text:\"Some customers report slower processes in certain services.\", stars:3},\n    {text:\"Customer support quality can vary between businesses.\", stars:3}\n  ],\n  \"Adani\": [\n    {text:\"Customers appreciate large-scale operations and infrastructure capabilities.\", stars:4},\n    {text:\"Some users value the availability of services in major markets.\", stars:4},\n    {text:\"Some customers mention communication and support delays.\", stars:3},\n    {text:\"Service experience can differ across business areas.\", stars:3}\n  ]\n};\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    reviews: reviews[item.json.competitor_name] || [],\n    review_count: (reviews[item.json.competitor_name] || []).length,\n    data_source: \"TEMPORARY_SYNTHETIC_TEST_DATA\"\n  }\n}));"
+      },
+      "id": "5e2edd01-9112-460b-9c49-f8e62d5e3f61",
+      "name": "📝 Review Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1536,
+        -160
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Competitor:\n{{ $json.competitor_name }}\n\nReviews:\n{{ JSON.stringify($json.reviews) }}\n\nAnalyze ONLY the supplied reviews.\n\nIdentify:\n- Top strengths\n- Top weaknesses\n- Common complaints\n- Positive themes\n- Negative themes\n- Overall summary\n\nRules:\n- Use only the supplied reviews.\n- Do not use external knowledge.\n- Do not invent information.\n- All output fields must be strings.\n- For multiple points, separate them with semicolons.\n- competitor must exactly match the supplied competitor name.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Review Analysis Agent.\n\nAnalyze only the reviews provided by the workflow.\n\nIdentify recurring customer themes and separate positive and negative feedback.\n\nRules:\n- Use only the supplied reviews.\n- Never use outside knowledge.\n- Never invent information.\n- Keep the analysis concise and business-focused.\n- Follow the required structured output format exactly."
+        }
+      },
+      "id": "84893471-683c-4065-b27a-068ebc083741",
+      "name": "Review Analysis Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1840,
+        -160
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1696,
+        -384
+      ],
+      "id": "13b11bae-db74-48ec-952e-932c02480aac",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "content": "Weekly Automation Trigger\nRuns the competitor intelligence workflow automatically every week and starts a new analysis cycle.",
+        "height": 304,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -288
+      ],
+      "id": "5874b534-4f8d-4fc9-88f5-904ac9cace78",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Competitor Setup\nDefines the competitors to monitor and prepares the run ID and report date for the weekly analysis.",
+        "height": 304,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -288
+      ],
+      "id": "15935732-8351-48e5-85ee-967c43931c1b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Review Data Collection\nCollects review signals for each configured competitor. Currently uses controlled synthetic test data for workflow testing.",
+        "height": 208,
+        "width": 160,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -32
+      ],
+      "id": "f6d0e4b0-8f7f-4aed-8e92-2cee70eede2f",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Process Competitors Individually\nProcesses one competitor at a time so each competitor receives separate AI analysis before moving to the next.",
+        "height": 256,
+        "width": 224,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        -512
+      ],
+      "id": "a79a7357-9f88-4ebb-b805-26daa75d34c9",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "AI Competitor Intelligence\nAnalyzes customer reviews for recurring themes, sentiment patterns, strengths, weaknesses, opportunities, and threats.",
+        "height": 448,
+        "width": 912,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1792,
+        -224
+      ],
+      "id": "c59aba37-9d0e-443e-bc1c-02557c023043",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Normalize Intelligence Data\nConverts each AI result into a consistent competitor-level structure for aggregation and downstream reporting.",
+        "height": 272,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        -288
+      ],
+      "id": "4d541a80-11e7-4d25-8b62-0feee91d21a3",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Aggregate Competitor Results\nCollects the completed analysis for all competitors into one consolidated intelligence dataset for comparison.",
+        "height": 304,
+        "width": 176,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2944,
+        -560
+      ],
+      "id": "727b19ca-2300-4fd0-ae49-0a4b16690a82",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Cross-Competitor Intelligence\nCompares all analyzed competitors to identify common patterns, key differences, customer pain points, and evidence-based opportunities.",
+        "height": 512,
+        "width": 288,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        -288
+      ],
+      "id": "51c277cb-dd1c-4f55-b7c2-6cff96766ee7",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Report Generation & Formatting\nConverts AI outputs into a structured HTML business report and prepares clean fields for Google Sheets and Gmail delivery.",
+        "height": 256,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3552,
+        -272
+      ],
+      "id": "0fce39a4-78a4-47a4-8b28-67ce17d9310b",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "Report Storage\nSaves the weekly competitor intelligence results in Google Sheets for historical tracking and future analysis.",
+        "height": 304,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3824,
+        -416
+      ],
+      "id": "68931b5a-a5a0-450e-9e25-b5cdcb9e3316",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "Email Report Delivery\nSends the formatted HTML competitor intelligence report automatically to the configured recipient.",
+        "height": 272,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3824,
+        -96
+      ],
+      "id": "e15ee5ce-35eb-4287-ad7a-8c386420c62e",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "8f21f7f5-594a-4803-ae30-db095d51cb0a",
+      "name": "🧠 Review AI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        1840,
+        80
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"competitor\": \"Reliance\",\n  \"top_strengths\": \"Wide range of services; Service availability; Large scale\",\n  \"top_weaknesses\": \"Service experience can vary; Pricing and support are not always consistent\",\n  \"common_complaints\": \"Service variation; Pricing inconsistency; Support inconsistency\",\n  \"positive_themes\": \"Wide range of services; Service availability; Large scale\",\n  \"negative_themes\": \"Service variation; Pricing inconsistency; Support inconsistency\",\n  \"overall_summary\": \"Reviews highlight the wide range and availability of services, while some reviews mention inconsistency in service, pricing, and support.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1984,
+        80
+      ],
+      "id": "6ab8414e-b48a-4ecd-9499-c46db67c3359",
+      "name": "🧩 Review Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "10b59955-81f5-474e-8498-3823f5933d38",
+      "name": "🧠 Sentiment AI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        2160,
+        80
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"competitor\": \"Reliance\",\n  \"overall_sentiment\": \"Mixed\",\n  \"positive_percentage\": 50,\n  \"neutral_percentage\": 0,\n  \"negative_percentage\": 50,\n  \"top_positive_keywords\": \"Wide range of services; Availability; Scale\",\n  \"top_negative_keywords\": \"Service inconsistency; Pricing; Support\",\n  \"sentiment_summary\": \"The supplied reviews contain positive feedback about service range and availability, along with negative feedback about service, pricing, and support consistency.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2304,
+        80
+      ],
+      "id": "991fec37-5276-4098-ae67-e2348649d00f",
+      "name": "🧩 Sentiment Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "6d9f3748-ddd0-4920-bc38-a279e12c4919",
+      "name": "🧠 SWOT AI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        2448,
+        80
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"competitor\": \"Reliance\",\n  \"strengths\": \"Wide range of services; Service availability; Large scale\",\n  \"weaknesses\": \"Service variation; Pricing inconsistency; Support inconsistency\",\n  \"opportunities\": \"Improve consistency across services; Improve pricing transparency; Improve support consistency\",\n  \"threats\": \"Negative customer experiences caused by inconsistent service, pricing, or support\",\n  \"swot_summary\": \"The main strengths are service range and availability, while the main weaknesses relate to consistency. Opportunities and threats are based on these observed customer patterns.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2592,
+        80
+      ],
+      "id": "64e4af60-1af4-4967-9601-8eb9c3788a0f",
+      "name": "🧩 SWOT Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "d4078baa-171a-481b-86f2-678a8bcbfb01",
+      "name": "🧠 Comparison AI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        3280,
+        96
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"executive_summary\": \"The competitors show different patterns in customer feedback, with variations in strengths, weaknesses, sentiment, and customer pain points.\",\n  \"competitor_summaries\": \"Reliance: Strong service range and availability, with consistency concerns. Tata: Strong trust and service network feedback, with some process and support concerns. Adani: Positive feedback on scale and availability, with communication and support concerns.\",\n  \"key_differences\": \"Differences in service experience, customer support, and operational consistency.\",\n  \"common_strengths\": \"Service availability; Large-scale operations; Broad service offerings\",\n  \"common_weaknesses\": \"Service consistency; Customer support consistency\",\n  \"cross_competitor_customer_patterns\": \"Customers value availability and scale, while consistency of service and support appears repeatedly.\",\n  \"differentiation_opportunities\": \"Improve service consistency; Improve customer support; Increase transparency\",\n  \"strategic_recommendations\": \"Focus on the customer pain points identified across competitors and differentiate through consistent service and support.\",\n  \"data_limitations\": \"The analysis is based only on the supplied review dataset and should not be treated as a complete market representation.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3424,
+        96
+      ],
+      "id": "c6ac7a6e-fef2-433e-8b7e-e3399ad595ca",
+      "name": "🧩 Comparison Output Parser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Aggregate All Competitors": {
+      "main": [
+        [
+          {
+            "node": "Competitor Comparison Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Report + Sheet Data": {
+      "main": [
+        [
+          {
+            "node": "Save Weekly Report to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Attractive HTML Gmail Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sentiment Analysis Agent1": {
+      "main": [
+        [
+          {
+            "node": "SWOT Analysis Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SWOT Analysis Agent1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Competitor Intelligence1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Competitor Intelligence1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitor Comparison Agent1": {
+      "main": [
+        [
+          {
+            "node": "Final Report + Sheet Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "⚙️ Competitor Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚙️ Competitor Configuration": {
+      "main": [
+        [
+          {
+            "node": "📝 Review Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Review Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Analysis Agent1": {
+      "main": [
+        [
+          {
+            "node": "Sentiment Analysis Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Competitors",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Review Analysis Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Review AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Review Analysis Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Review Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Review Analysis Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Sentiment AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Sentiment Analysis Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Sentiment Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Sentiment Analysis Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 SWOT AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SWOT Analysis Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 SWOT Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "SWOT Analysis Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Comparison AI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Competitor Comparison Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧩 Comparison Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Competitor Comparison Agent1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {},
+  "nodeGroups": []
+}
