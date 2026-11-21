@@ -89,7 +89,7 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 **Jasvant Malvi**
 
 - GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
+- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
 
 ---
 
