@@ -90,3 +90,13 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 
 - GitHub: https://github.com/jasvantMalvi
 - LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
+
+---
+
+## Workflow Demonstration
+
+![Complete Workflow and Successful Execution](screenshots/YOUR-IMAGE-FILENAME.jpeg)
+
+## Workflow Export
+
+[View sanitized n8n workflow](workflow.json)
