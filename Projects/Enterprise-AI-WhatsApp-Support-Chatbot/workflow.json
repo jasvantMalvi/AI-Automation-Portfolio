@@ -1,0 +1,2125 @@
+{
+  "name": "Enterprise AI WhatsApp Support Chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": [
+            "all"
+          ]
+        }
+      },
+      "id": "a7402393-88d5-46ea-889c-d655a92e4e11",
+      "name": "WhatsApp Trigger",
+      "position": [
+        832,
+        384
+      ],
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "\n// Normalise the WhatsApp Cloud API payload into clean, flat fields.\nconst j = $json || {};\nconst msg = (j.messages && j.messages[0]) || {};\nconst contact = (j.contacts && j.contacts[0]) || {};\n\nconst phone = msg.from || (contact.wa_id) || '';\nconst name = (contact.profile && contact.profile.name) || 'Customer';\nconst message = (msg.text && msg.text.body) || msg.button?.text || '';\nconst tsRaw = msg.timestamp ? Number(msg.timestamp) * 1000 : Date.now();\nconst timestamp = new Date(tsRaw).toISOString();\n\n// Detect 24h follow-up replies. Exact short affirmatives/negatives are treated\n// as follow-up answers; everything else is a normal support message.\nconst norm = message.trim().toLowerCase().replace(/[!.\\s]+$/g, '');\nconst yesSet = ['yes','y','yep','yeah','resolved','solved','it works','fixed'];\nconst noSet  = ['no','n','nope','not resolved','unresolved','still broken','not fixed'];\n\nlet route = 'support';\nif (yesSet.includes(norm)) route = 'followup_yes';\nelse if (noSet.includes(norm)) route = 'followup_no';\n\nreturn { phone, name, message, timestamp, normalizedText: norm, route };\n"
+      },
+      "id": "9bd9ea99-3cfd-4e59-b2a1-3c9c42f95581",
+      "name": "Extract Message Data",
+      "position": [
+        1056,
+        384
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "route-support",
+              "leftValue": "={{ $json.route }}",
+              "rightValue": "support",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "77438791-527e-442b-87a7-6274be67b6e5",
+      "name": "Is Support Message?",
+      "position": [
+        1280,
+        384
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Customers",
+          "cachedResultUrl": ""
+        },
+        "filterByFormula": "={Phone}='{{ $json.phone }}'",
+        "returnAll": false,
+        "limit": 1,
+        "options": {}
+      },
+      "id": "0ae28ac7-7d90-4c79-b297-5f4e198114f5",
+      "name": "Find Customer",
+      "position": [
+        1504,
+        192
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "735c1604-ef9a-473c-bb3d-a180310ff0ec",
+      "name": "Customer Exists?",
+      "position": [
+        1696,
+        192
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Conversation History",
+          "cachedResultUrl": ""
+        },
+        "filterByFormula": "={Customer} = '{{ $json.id }}'",
+        "returnAll": false,
+        "limit": 10,
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "Timestamp",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "id": "bef2b78b-a553-4823-a312-10f534b0506d",
+      "name": "Get Conversation History",
+      "position": [
+        2176,
+        176
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Build a compact conversation-history string for the AI Agent prompt.\nconst ext = $('Extract Message Data').first().json;\nconst rows = $input.all()\n  .map(i => i.json)\n  .filter(r => r && (r['Customer Message'] || r['AI Response'] || (r.fields && (r.fields['Customer Message'] || r.fields['AI Response']))));\n\nconst historyLines = rows.map(r => {\n  const f = r.fields || r;\n  const when = f.Timestamp || '';\n  const cust = f['Customer Message'] ? ('Customer: ' + f['Customer Message']) : '';\n  const bot = f['AI Response'] ? ('Agent: ' + f['AI Response']) : '';\n  return [when, cust, bot].filter(Boolean).join(' | ');\n});\n\nconst historyText = historyLines.length ? historyLines.reverse().join('\\n') : 'No previous conversation history.';\n\nreturn [{\n  json: {\n    name: ext.name,\n    phone: ext.phone,\n    message: ext.message,\n    timestamp: ext.timestamp,\n    historyText,\n  },\n}];\n"
+      },
+      "id": "79445b17-e4b0-4e2e-b657-7caae3c12287",
+      "name": "Assemble Context",
+      "position": [
+        2416,
+        176
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer name: {{ $json.name }}\nPhone: {{ $json.phone }}\nMessage time: {{ $json.timestamp }}\n\nPrevious conversation history:\n{{ $json.historyText }}\n\nCurrent customer message:\n\"\"\"{{ $json.message }}\"\"\"",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an enterprise-grade AI customer support agent for the company. You are empathetic, concise, professional, and solution-oriented.\n\n## Your job\nFor every customer message, analyze:\n- The latest customer message.\n- The previous conversation history.\n- The company knowledge base (when applicable).\n\nReturn ONLY one valid JSON object with the following fields:\n\n{\n  \"intent\": \"snake_case_intent\",\n  \"sentiment\": \"Positive | Neutral | Frustrated | Angry\",\n  \"priority\": \"Low | Medium | High | Critical\",\n  \"category\": \"Billing | Technical | Order | Refund | Account | General Inquiry\",\n  \"confidence\": 0-100,\n  \"action\": \"resolve | clarify | escalate\",\n  \"response\": \"Customer-facing response\",\n  \"clarifying_question\": \"Question only when action=clarify, otherwise empty string.\"\n}\n\n## Knowledge Base Rules\n\n- For FAQ, policies, billing, refunds, shipping, tracking, subscriptions, passwords, and product information, ALWAYS use the company_knowledge_base tool before answering.\n- Never invent company policies or information.\n- If the knowledge base does not contain enough information, do not guess.\n\n## Decision Rules\n\nChoose ONLY ONE action.\n\n### Resolve\n\nChoose \"resolve\" when:\n- The knowledge base fully answers the customer's question.\n- You can confidently solve the issue without human intervention.\n\n### Clarify\n\nChoose \"clarify\" ONLY when:\n- Exactly ONE critical piece of information is missing.\n- Ask ONLY ONE focused question.\n- Never ask multiple clarification questions for the same issue.\n\nExamples:\n- Missing order number.\n- Missing registered email.\n- Missing invoice ID.\n\n### Escalate\n\nChoose \"escalate\" immediately when:\n\n- The customer already followed troubleshooting steps but the issue still exists.\n- The issue requires human verification.\n- Account access cannot be restored automatically.\n- Password reset still fails after attempting reset.\n- Billing disputes.\n- Refund disputes.\n- Technical bugs.\n- Backend issues.\n- Missing or damaged orders.\n- Security concerns.\n- Low confidence after ONE clarification.\n\nWhen escalating:\n- Inform the customer that a support ticket has been created.\n- Be empathetic.\n- Do not promise timelines that are not in the knowledge base.\n\n## Confidence Rules\n\nConfidence is informational only.\n\nDo NOT decide the action using confidence alone.\n\nExamples:\n\nFAQ answered completely\n→ confidence 95\n→ resolve\n\nNeed one missing detail\n→ confidence 70\n→ clarify\n\nBackend issue requiring human support\n→ confidence 80\n→ escalate\n\nCustomer already tried troubleshooting\n→ confidence 60\n→ escalate\n\n## Important Rules\n\n- Never ask more than ONE clarification question for the same issue.\n- If conversation history already contains a clarification question and the customer replies but the issue remains unresolved, choose \"escalate\".\n- Do not repeatedly ask similar questions.\n- Always use conversation history before deciding.\n- Always return valid JSON only.\n- Never include markdown.\n- Never include explanations outside JSON.\n\n## Style\n\n- Match the customer's language.\n- Be warm, professional, and concise.\n- Keep responses under 500 characters.",
+          "maxIterations": 8
+        }
+      },
+      "id": "cdfc155c-a5c7-426c-9e3b-eb1244478059",
+      "name": "AI Support Agent",
+      "position": [
+        2752,
+        176
+      ],
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5",
+          "cachedResultName": "gpt-5"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxRetries": 3
+        }
+      },
+      "id": "93d30841-b087-4025-b477-89f0be27dc55",
+      "name": "OpenAI Chat Model",
+      "position": [
+        2624,
+        416
+      ],
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Extract Message Data').item.json.phone }}",
+        "contextWindowLength": 12
+      },
+      "id": "e4f37d31-ff95-4439-a578-64d20938401f",
+      "name": "Conversation Memory",
+      "position": [
+        2768,
+        464
+      ],
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Authoritative company knowledge base containing FAQs, product documentation, refund policy, shipping policy, user manuals and internal support documents. ALWAYS query this before answering any factual or policy question. Input must be a fully-formed question.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "company_kb",
+          "cachedResultName": "company_kb"
+        },
+        "topK": 5
+      },
+      "id": "6c088780-590f-4c15-a998-4ce6f1916cd8",
+      "name": "company_knowledge_base",
+      "position": [
+        2912,
+        448
+      ],
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "options": {
+          "dimensions": 1536
+        }
+      },
+      "id": "2e97fdfa-0b3b-45cd-8f62-bd1a387941f8",
+      "name": "KB Embeddings",
+      "position": [
+        2912,
+        672
+      ],
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"intent\": \"refund_request\",\n  \"sentiment\": \"Frustrated\",\n  \"priority\": \"High\",\n  \"category\": \"Refund\",\n  \"confidence\": 92,\n  \"action\": \"escalate\",\n  \"response\": \"A short, empathetic, professional reply to send to the customer.\",\n  \"clarifying_question\": \"A single question to ask if confidence < 85, else empty string.\"\n}"
+      },
+      "id": "7c0d6c97-21f4-40ab-948d-40da43e62dbd",
+      "name": "Support Output Parser",
+      "position": [
+        3200,
+        400
+      ],
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-escalate",
+              "leftValue": "={{ $json.output.action }}",
+              "rightValue": "escalate",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "57d47c20-633f-452f-80a1-c2935d3d2a3b",
+      "name": "Needs Escalation?",
+      "position": [
+        3216,
+        176
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ticket-id",
+              "name": "ticket_id",
+              "type": "string",
+              "value": "=TKT-{{ $now.toFormat('yyyyLLdd') }}-{{ Math.floor(Math.random() * 900000 + 100000) }}"
+            },
+            {
+              "id": "department",
+              "name": "department",
+              "type": "string",
+              "value": "={{ ({'Billing':'Finance','Technical':'Technical Support','Order':'Order Management','Refund':'Finance','Account':'Account Management','General Inquiry':'General Support'})[$json.output.category] || 'General Support' }}"
+            },
+            {
+              "id": "status",
+              "name": "status",
+              "type": "string",
+              "value": "Open"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a0490c37-1b95-49ea-95e4-e56d016dc5da",
+      "name": "Generate Ticket Details",
+      "position": [
+        3440,
+        0
+      ],
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Ticket ID": "={{ $json.ticket_id }}",
+            "Customer": "={{ $('Extract Message Data').item.json.phone }}",
+            "Issue": "={{ $('Extract Message Data').item.json.message }}",
+            "Category": "={{ $json.output.category }}",
+            "Priority": "={{ $json.output.priority }}",
+            "Sentiment": "={{ $json.output.sentiment }}",
+            "Assigned Department": "={{ $json.department }}",
+            "AI Confidence Score": "={{ $json.output.confidence }}",
+            "Status": "={{ $json.status }}"
+          }
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "56cbb659-1124-4e33-8d5e-eda5b3d12144",
+      "name": "Create Support Ticket",
+      "position": [
+        3664,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🎫 <b>New Support Ticket</b>\nID: {{ $('Generate Ticket Details').item.json.ticket_id }}\nCustomer: {{ $('Extract Message Data').item.json.name }} ({{ $('Extract Message Data').item.json.phone }})\nCategory: {{ $('AI Support Agent').item.json.output.category }} | Priority: {{ $('AI Support Agent').item.json.output.priority }} | Sentiment: {{ $('AI Support Agent').item.json.output.sentiment }}\nDept: {{ $('Generate Ticket Details').item.json.department }}\n\nIssue: {{ $('Extract Message Data').item.json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "f030efb8-cee7-46f9-8989-abdad7ac8d3c",
+      "name": "Notify Team - New Ticket",
+      "position": [
+        3888,
+        0
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "={{ $('AI Support Agent').item.json.output.response }}\n\nYour reference number is {{ $('Generate Ticket Details').item.json.ticket_id }}.",
+        "additionalFields": {}
+      },
+      "id": "e2548a24-7abf-4b05-adaa-a48c2abaf5c6",
+      "name": "WhatsApp - Ticket Ack",
+      "position": [
+        4112,
+        0
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Conversation History",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer": "={{ $('Extract Message Data').item.json.phone }}",
+            "Support Ticket": "={{ $('Generate Ticket Details').item.json.ticket_id }}",
+            "Customer Message": "={{ $('Extract Message Data').item.json.message }}",
+            "AI Response": "={{ $('AI Support Agent').item.json.output.response }}",
+            "Intent": "={{ $('AI Support Agent').item.json.output.intent }}",
+            "Sentiment": "={{ $('AI Support Agent').item.json.output.sentiment }}",
+            "AI Model": "gpt-5"
+          }
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "a07c8f75-70af-4614-973c-031953202365",
+      "name": "Save Conversation (Escalated)",
+      "position": [
+        4336,
+        0
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-clarify",
+              "leftValue": "={{ $json.output.action }}",
+              "rightValue": "clarify",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "912e8641-2f02-411d-9946-e35d15ff9c26",
+      "name": "Needs Clarification?",
+      "position": [
+        3440,
+        288
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "={{ $json.output.clarifying_question }}",
+        "additionalFields": {}
+      },
+      "id": "efb2edd3-284b-40c8-b0b9-941a5d5c2179",
+      "name": "WhatsApp - Clarify",
+      "position": [
+        3664,
+        192
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Conversation History",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Message": "={{ $('Extract Message Data').item.json.message }}",
+            "AI Response": "={{ $('AI Support Agent').item.json.output.clarifying_question }}",
+            "Intent": "={{ $('AI Support Agent').item.json.output.intent }}",
+            "Sentiment": "={{ $('AI Support Agent').item.json.output.sentiment }}",
+            "AI Model": "GPT-4o mini",
+            "Timestamp": "={{ $('Extract Message Data').item.json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Conversation ID",
+              "displayName": "Conversation ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Support Ticket",
+              "displayName": "Support Ticket",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer Message",
+              "displayName": "Customer Message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Response",
+              "displayName": "AI Response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Product Inquiry",
+                  "value": "Product Inquiry"
+                },
+                {
+                  "name": "Order Tracking",
+                  "value": "Order Tracking"
+                },
+                {
+                  "name": "Refund Request",
+                  "value": "Refund Request"
+                },
+                {
+                  "name": "Technical Problem",
+                  "value": "Technical Problem"
+                },
+                {
+                  "name": "Billing Complaint",
+                  "value": "Billing Complaint"
+                },
+                {
+                  "name": "Account Login Problem",
+                  "value": "Account Login Problem"
+                },
+                {
+                  "name": "General Inquiry",
+                  "value": "General Inquiry"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Positive",
+                  "value": "Positive"
+                },
+                {
+                  "name": "Neutral",
+                  "value": "Neutral"
+                },
+                {
+                  "name": "Frustrated",
+                  "value": "Frustrated"
+                },
+                {
+                  "name": "Angry",
+                  "value": "Angry"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Model",
+              "displayName": "AI Model",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "GPT-4o",
+                  "value": "GPT-4o"
+                },
+                {
+                  "name": "GPT-4o mini",
+                  "value": "GPT-4o mini"
+                },
+                {
+                  "name": "Claude 3.5 Sonnet",
+                  "value": "Claude 3.5 Sonnet"
+                },
+                {
+                  "name": "Gemini 1.5 Pro",
+                  "value": "Gemini 1.5 Pro"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "043a78ed-9762-4fd8-9350-c51a6e7e276f",
+      "name": "Save Conversation (Clarify)",
+      "position": [
+        3888,
+        192
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "={{ $json.output.response }}",
+        "additionalFields": {}
+      },
+      "id": "41048936-535c-42ba-92f5-dd62460706d8",
+      "name": "WhatsApp - Response",
+      "position": [
+        3664,
+        384
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Conversation History",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Message": "={{ $('Extract Message Data').item.json.message }}",
+            "AI Response": "={{ $('AI Support Agent').item.json.output.response }}",
+            "Intent": "={{ $('AI Support Agent').item.json.output.intent }}",
+            "Sentiment": "={{ $('AI Support Agent').item.json.output.sentiment }}",
+            "Timestamp": "={{ $('Extract Message Data').item.json.timestamp }}",
+            "AI Model": "GPT-4o mini"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Conversation ID",
+              "displayName": "Conversation ID",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Support Ticket",
+              "displayName": "Support Ticket",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer Message",
+              "displayName": "Customer Message",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Response",
+              "displayName": "AI Response",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Product Inquiry",
+                  "value": "Product Inquiry"
+                },
+                {
+                  "name": "Order Tracking",
+                  "value": "Order Tracking"
+                },
+                {
+                  "name": "Refund Request",
+                  "value": "Refund Request"
+                },
+                {
+                  "name": "Technical Problem",
+                  "value": "Technical Problem"
+                },
+                {
+                  "name": "Billing Complaint",
+                  "value": "Billing Complaint"
+                },
+                {
+                  "name": "Account Login Problem",
+                  "value": "Account Login Problem"
+                },
+                {
+                  "name": "General Inquiry",
+                  "value": "General Inquiry"
+                },
+                {
+                  "name": "product_catalog_inquiry",
+                  "value": "product_catalog_inquiry"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Positive",
+                  "value": "Positive"
+                },
+                {
+                  "name": "Neutral",
+                  "value": "Neutral"
+                },
+                {
+                  "name": "Frustrated",
+                  "value": "Frustrated"
+                },
+                {
+                  "name": "Angry",
+                  "value": "Angry"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Model",
+              "displayName": "AI Model",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "GPT-4o",
+                  "value": "GPT-4o"
+                },
+                {
+                  "name": "GPT-4o mini",
+                  "value": "GPT-4o mini"
+                },
+                {
+                  "name": "Claude 3.5 Sonnet",
+                  "value": "Claude 3.5 Sonnet"
+                },
+                {
+                  "name": "Gemini 1.5 Pro",
+                  "value": "Gemini 1.5 Pro"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "42f09960-a37c-4e17-b86d-637ebe1afd8d",
+      "name": "Save Conversation (Resolved)",
+      "position": [
+        3888,
+        384
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "=Hi {{ $('Extract Message Data').item.json.name }}, following up on the issue you contacted us about yesterday. Has it been fully resolved? Please reply YES if it's sorted, or NO if you still need help.",
+        "additionalFields": {}
+      },
+      "id": "f3f4a2e2-3125-4ac2-bee2-4ad60e083fdd",
+      "name": "WhatsApp - Follow Up",
+      "position": [
+        4336,
+        384
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Customers",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Full Name": "={{ $('Extract Message Data').item.json.name }}",
+            "Phone": "={{ $('Extract Message Data').item.json.phone }}",
+            "Preferred Language": "Hindi",
+            "Country": "India",
+            "Status": "Active",
+            "Last Interaction": "={{ $('Extract Message Data').item.json.timestamp }}",
+            "Customer Type": "Individual",
+            "Priority": "VIP"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Preferred Language",
+              "displayName": "Preferred Language",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "English",
+                  "value": "English"
+                },
+                {
+                  "name": "Spanish",
+                  "value": "Spanish"
+                },
+                {
+                  "name": "French",
+                  "value": "French"
+                },
+                {
+                  "name": "German",
+                  "value": "German"
+                },
+                {
+                  "name": "Portuguese",
+                  "value": "Portuguese"
+                },
+                {
+                  "name": "Arabic",
+                  "value": "Arabic"
+                },
+                {
+                  "name": "Hindi",
+                  "value": "Hindi"
+                },
+                {
+                  "name": "Japanese",
+                  "value": "Japanese"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Country",
+              "displayName": "Country",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Active",
+                  "value": "Active"
+                },
+                {
+                  "name": "Inactive",
+                  "value": "Inactive"
+                },
+                {
+                  "name": "VIP",
+                  "value": "VIP"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Last Interaction",
+              "displayName": "Last Interaction",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Customer Type",
+              "displayName": "Customer Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Individual",
+                  "value": "Individual"
+                },
+                {
+                  "name": "Business",
+                  "value": "Business"
+                },
+                {
+                  "name": "Other",
+                  "value": "Other"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "VIP",
+                  "value": "VIP"
+                },
+                {
+                  "name": "High",
+                  "value": "High"
+                },
+                {
+                  "name": "Normal",
+                  "value": "Normal"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Support Tickets",
+              "displayName": "Support Tickets",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Conversation History",
+              "displayName": "Conversation History",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "array",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "1537d6d2-04af-43e9-aef5-589a2e5accb8",
+      "name": "Create Customer",
+      "position": [
+        1952,
+        368
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "route-yes",
+              "leftValue": "={{ $json.route }}",
+              "rightValue": "followup_yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1d982ef6-5975-4911-b10a-4350097a2fab",
+      "name": "Is Positive Reply?",
+      "position": [
+        1552,
+        848
+      ],
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": ""
+        },
+        "filterByFormula": "=AND(SEARCH('{{ $json.phone }}', ARRAYJOIN({Customer})), {Status}='Open')",
+        "returnAll": false,
+        "limit": 1,
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "Created At",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "id": "e5f4482a-7391-4042-b0d0-f7bee3b534f9",
+      "name": "Find Open Ticket (Yes)",
+      "position": [
+        1776,
+        752
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "value": {
+            "id": "={{ $json.id }}",
+            "Status": "Closed",
+            "Resolution Notes": "Customer confirmed the issue was resolved via the 24h follow-up."
+          }
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "12e4cab1-fcd9-42fb-b816-23decc5166d1",
+      "name": "Close Ticket",
+      "position": [
+        2000,
+        752
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "=Thank you for confirming! We're glad your issue is resolved and have closed your ticket. Reach out anytime you need help. 💙",
+        "additionalFields": {}
+      },
+      "id": "37c9a300-ea0a-4bd5-9f81-dcde1fbc0dfd",
+      "name": "WhatsApp - Ticket Closed",
+      "position": [
+        2224,
+        752
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": ""
+        },
+        "filterByFormula": "=AND(SEARCH('{{ $json.phone }}', ARRAYJOIN({Customer})), {Status}='Open')",
+        "returnAll": false,
+        "limit": 1,
+        "options": {},
+        "sort": {
+          "property": [
+            {
+              "field": "Created At",
+              "direction": "desc"
+            }
+          ]
+        }
+      },
+      "id": "4873379f-5d28-458f-84a2-9b22e32f4667",
+      "name": "Find Open Ticket (No)",
+      "position": [
+        1776,
+        944
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "update",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Support Tickets",
+          "cachedResultUrl": ""
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "id"
+          ],
+          "value": {
+            "id": "={{ $json.id }}",
+            "Status": "Escalated",
+            "Assigned Agent": "Human Agent",
+            "Priority": "High",
+            "Resolution Notes": "Escalated to a human agent: customer replied NO to the 24h follow-up."
+          }
+        },
+        "options": {
+          "typecast": true
+        }
+      },
+      "id": "69f81cd7-9beb-48dc-a2b7-f58345a1ce9f",
+      "name": "Escalate Ticket",
+      "position": [
+        2000,
+        944
+      ],
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🚨 <b>ESCALATION</b>\nCustomer: {{ $('Extract Message Data').item.json.name }} ({{ $('Extract Message Data').item.json.phone }})\nTicket: {{ $json.fields ? $json.fields['Ticket ID'] : $json['Ticket ID'] }}\nCustomer replied NO to the 24h follow-up. A human agent must take over.",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "085c0d5b-3b53-4d43-a589-21f676e7d741",
+      "name": "Notify Team - Escalation",
+      "position": [
+        2224,
+        944
+      ],
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Extract Message Data').item.json.phone }}",
+        "textBody": "=Sorry to hear that. We've escalated your case to a senior human agent who will contact you shortly. Thank you for your patience.",
+        "additionalFields": {}
+      },
+      "id": "ae090a85-afb1-4868-b22c-19ffd6e661da",
+      "name": "WhatsApp - Escalation Ack",
+      "position": [
+        2448,
+        944
+      ],
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "unit": "hours"
+      },
+      "id": "4a2df7cf-4032-4448-8203-c4433c080535",
+      "name": "Wait",
+      "position": [
+        4112,
+        384
+      ],
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {},
+      "id": "323d1ff9-913d-424d-8193-37c8e5efaedd",
+      "name": "When clicking Execute workflow",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "AI Customer Support Chatbot",
+          "cachedResultUrl": ""
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Knowledge Base",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "id": "d0cfc22c-a2db-4b7d-bbfb-10842ca93bb6",
+      "name": "Get Knowledge Base Records",
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Convert every Airtable record into a searchable document\nconst items = $input.all();\nconst docs = [];\n\nfor (const item of items) {\n  // Airtable may return fields at top level or nested under .fields\n  const f = item.json && item.json.fields ? item.json.fields : item.json;\n\n  const question = f.Question != null ? f.Question : '';\n  const category = f.Category != null ? f.Category : '';\n  const keywords = f.Keywords != null ? f.Keywords : '';\n  const answer = f.Answer != null ? f.Answer : '';\n\n  const document =\n    'Title: ' + question + '\\n\\n' +\n    'Category: ' + category + '\\n\\n' +\n    'Keywords:\\n' + keywords + '\\n\\n' +\n    'Answer:\\n' + answer;\n\n  docs.push({\n    json: {\n      document,\n      title: question,\n      category,\n    },\n  });\n}\n\nreturn docs;"
+      },
+      "id": "4563561e-bad1-4ad1-8d5b-cbc6fc6017df",
+      "name": "Build Documents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "company_kb",
+          "cachedResultName": "company_kb"
+        },
+        "clearStore": true
+      },
+      "id": "3719c40a-919c-4b78-bebe-270c3193a1f8",
+      "name": "Insert into Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a5637c90-2359-4e75-8fed-5f6872edcdc4",
+      "name": "OpenAI Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        1296
+      ]
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.document }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "title",
+                "value": "={{ $json.title }}"
+              },
+              {
+                "name": "category",
+                "value": "={{ $json.category }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5058a0df-0f00-4891-8ab4-04bd57842d4a",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        816,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "id": "d7de1c6e-5000-4cee-930b-f7f30c6a94ea",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        816,
+        1488
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Report how many documents were loaded into the vector store\nconst count = $('Build Documents').all().length;\n\nreturn [\n  {\n    json: {\n      status: 'success',\n      documents_loaded: count,\n      vector_store: 'company_kb',\n    },\n  },\n];"
+      },
+      "id": "37a0a03d-d976-42e6-9886-6eb128202a96",
+      "name": "Success Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        1056
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Message Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message Data": {
+      "main": [
+        [
+          {
+            "node": "Is Support Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Support Message?": {
+      "main": [
+        [
+          {
+            "node": "Find Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Is Positive Reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Customer": {
+      "main": [
+        [
+          {
+            "node": "Customer Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Exists?": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation History": {
+      "main": [
+        [
+          {
+            "node": "Assemble Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Context": {
+      "main": [
+        [
+          {
+            "node": "AI Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Support Agent": {
+      "main": [
+        [
+          {
+            "node": "Needs Escalation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Support Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "company_knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KB Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "company_knowledge_base",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Support Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Escalation?": {
+      "main": [
+        [
+          {
+            "node": "Generate Ticket Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Needs Clarification?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Ticket Details": {
+      "main": [
+        [
+          {
+            "node": "Create Support Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Support Ticket": {
+      "main": [
+        [
+          {
+            "node": "Notify Team - New Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Team - New Ticket": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Ticket Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp - Ticket Ack": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation (Escalated)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Clarification?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Clarify",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WhatsApp - Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp - Clarify": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation (Clarify)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp - Response": {
+      "main": [
+        [
+          {
+            "node": "Save Conversation (Resolved)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Conversation (Resolved)": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Customer": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Positive Reply?": {
+      "main": [
+        [
+          {
+            "node": "Find Open Ticket (Yes)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Open Ticket (No)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Open Ticket (Yes)": {
+      "main": [
+        [
+          {
+            "node": "Close Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close Ticket": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Ticket Closed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Open Ticket (No)": {
+      "main": [
+        [
+          {
+            "node": "Escalate Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalate Ticket": {
+      "main": [
+        [
+          {
+            "node": "Notify Team - Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Team - Escalation": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Escalation Ack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp - Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking Execute workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Knowledge Base Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Knowledge Base Records": {
+      "main": [
+        [
+          {
+            "node": "Build Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Documents": {
+      "main": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert into Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert into Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
