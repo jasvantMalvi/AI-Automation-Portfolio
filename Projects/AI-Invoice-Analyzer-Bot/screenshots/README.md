@@ -1,3 +1,3 @@
 ## Workflow Overview
 
-![AI Invoice Analyzer Workflow](screenshots/workflow-overview.png)
+![AI Invoice Analyzer Workflow](workflow-overview.png)
