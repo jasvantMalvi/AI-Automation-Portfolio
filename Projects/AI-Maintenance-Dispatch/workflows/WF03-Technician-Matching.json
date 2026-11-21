@@ -1,0 +1,142 @@
+{
+  "name": "WF03_Technician_Matching",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "maintenance-dispatch",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2eadb22e-7db0-4356-99a1-653d2a1ba592",
+      "name": "Dispatch Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body ?? $json;\n\nreturn [{\n  json: {\n    ticket_id: String(b.ticket_id ?? ''),\n    category: String(b.category ?? ''),\n    priority: String(b.priority ?? 'Medium')\n  }\n}];"
+      },
+      "id": "18be9875-1df6-4253-a726-7d1871beafbb",
+      "name": "Read Dispatch Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1801646388,
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "id": "5202c8a7-ee34-4a11-b521-12bd0127acf3",
+      "name": "Read Technicians",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        464,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const request = $('Read Dispatch Input').first().json;\n\nif (!request.ticket_id || !request.category) {\n  return [{\n    json: {\n      success: false,\n      error: 'ticket_id and category are required'\n    }\n  }];\n}\n\nif (request.priority === 'Critical') {\n  return [{\n    json: {\n      success: false,\n      ticket_id: request.ticket_id,\n      requires_human_review: true,\n      message: 'Critical incidents require manual approval'\n    }\n  }];\n}\n\nconst technicians = $input.all().map(item => item.json);\n\nconst matches = technicians.filter(t => {\n  const skills = String(t.Skills ?? '')\n    .toLowerCase()\n    .split(',')\n    .map(s => s.trim());\n\n  const available =\n    String(t.Availability ?? '').toLowerCase() === 'available';\n\n  const activeJobs = Number(t.Active_Jobs ?? 0);\n  const maxJobs = Number(t.Max_Jobs ?? 1);\n\n  return skills.includes(request.category.toLowerCase())\n    && available\n    && activeJobs < maxJobs;\n});\n\nmatches.sort((a, b) =>\n  Number(a.Active_Jobs ?? 0) - Number(b.Active_Jobs ?? 0)\n);\n\nif (matches.length === 0) {\n  return [{\n    json: {\n      success: false,\n      ticket_id: request.ticket_id,\n      message: 'No available matching technician. Manual assignment required.'\n    }\n  }];\n}\n\nconst t = matches[0];\n\nreturn [{\n  json: {\n    success: true,\n    ticket_id: request.ticket_id,\n    technician_id: t.Technician_ID,\n    technician_name: t.Technician_Name,\n    technician_email: t.Email,\n    dispatch_status: 'Awaiting Confirmation',\n    assigned_date: new Date().toISOString(),\n    message: 'Technician successfully matched. Awaiting admin confirmation.'\n  }\n}];"
+      },
+      "id": "2d9aa642-e017-4e26-adf9-e6f389ec20f2",
+      "name": "Match Available Technician",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "ceb3fc4f-d046-466f-94fb-bfee1cd1b2be",
+      "name": "API Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        992,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Dispatch Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Dispatch Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Dispatch Input": {
+      "main": [
+        [
+          {
+            "node": "Read Technicians",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Technicians": {
+      "main": [
+        [
+          {
+            "node": "Match Available Technician",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match Available Technician": {
+      "main": [
+        [
+          {
+            "node": "API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}

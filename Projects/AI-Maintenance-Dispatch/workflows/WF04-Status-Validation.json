@@ -1,0 +1,82 @@
+{
+  "name": "WF04_Status_Validation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "maintenance-status",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9ee934b0-1cd3-4aff-bb02-ab4ad03757fc",
+      "name": "Status Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $json.body ?? $json;\n\nconst allowed = [\n  'Pending',\n  'Analyzing',\n  'Awaiting Approval',\n  'Assigned',\n  'In Progress',\n  'On Hold',\n  'Completed',\n  'Rejected',\n  'Escalated'\n];\n\nif (!b.ticket_id || !allowed.includes(b.status)) {\n  return [{\n    json: {\n      success: false,\n      error: 'Valid ticket_id and status required'\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    success: true,\n    ticket_id: String(b.ticket_id),\n    status: b.status,\n    resolution_notes: String(b.resolution_notes ?? ''),\n    updated_at: new Date().toISOString(),\n    message: 'Status validated successfully'\n  }\n}];"
+      },
+      "id": "ab0c574a-3021-41d5-b6c0-e7f780e8d8f6",
+      "name": "Validate Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "13729c85-ebd9-4a1a-8df2-6ee6de80b996",
+      "name": "API Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        624,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Status Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Status": {
+      "main": [
+        [
+          {
+            "node": "API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}
