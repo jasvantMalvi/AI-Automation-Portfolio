@@ -60,3 +60,12 @@ AI-Powered-Personal-Assistant-in-Telegram/
 - GitHub: https://github.com/jasvantMalvi
 - LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
+## Project Files
+
+- [Download n8n Workflow JSON](./workflow.json) — Sanitized workflow export for importing into n8n.
+- [View Project Screenshots](./screenshots/) — Workflow overview and visual documentation.
+
+## Workflow Screenshot
+
+![AI Powered Personal Assistant in Telegram](./screenshots/workflow-overview.png)
+
