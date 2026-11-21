@@ -85,7 +85,7 @@ Import the workflow into n8n and configure your own credentials, spreadsheet IDs
 **Jasvant Malvi**
 
 - GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
+- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
 
 *Building smarter workflows. Automating repetitive tasks. Solving real-world problems.*
 
