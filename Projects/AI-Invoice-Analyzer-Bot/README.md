@@ -102,3 +102,13 @@ Use synthetic invoice data for public demonstrations. Never publish real custome
 
 - GitHub: https://github.com/jasvantMalvi
 - LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
+
+---
+
+## Workflow Demonstration
+
+![AI Invoice Analyzer Workflow](screenshots/workflow-overview.png)
+
+## Workflow Export
+
+[View sanitized n8n workflow](workflow.json)
