@@ -21,7 +21,7 @@ Detailed project documentation will be added progressively.
 
 1. [Enterprise AI WhatsApp Support Chatbot](Enterprise-AI-WhatsApp-Support-Chatbot/README.md) — AI-powered customer support using n8n, WhatsApp, OpenAI and Airtable.
 2. [AI IT Help Desk and Incident Resolution Agent](AI-IT-Help-Desk-Incident-Resolution-Agent/README.md) — Automates IT support requests, AI issue classification, priority assessment, troubleshooting and incident escalation using n8n, OpenAI, Gmail and Google Sheets.
-3. AI KYC Customer Verification
+3. [AI KYC Customer Verification](AI-KYC-Customer-Verification/README.md) — KYC document intake, identity checks, duplicate lookup, risk assessment and manual-review routing using n8n, Telegram and Google Sheets.
 4. AI Invoice Analyzer Bot
 5. AI Competitor Intelligence Agent
 6. AI Attendance Intelligence Agent Using Airtable
