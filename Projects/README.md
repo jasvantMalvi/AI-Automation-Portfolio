@@ -23,12 +23,12 @@ Detailed project documentation will be added progressively.
 2. [AI IT Help Desk and Incident Resolution Agent](AI-IT-Help-Desk-Incident-Resolution-Agent/README.md) — Automates IT support requests, AI issue classification, priority assessment, troubleshooting and incident escalation using n8n, OpenAI, Gmail and Google Sheets.
 3. [AI KYC Customer Verification](AI-KYC-Customer-Verification/README.md) — KYC document intake, identity checks, duplicate lookup, risk assessment and manual-review routing using n8n, Telegram and Google Sheets.
 4. [AI Invoice Analyzer Bot](AI-Invoice-Analyzer-Bot/README.md) — Automates invoice email intake, AI-powered data extraction, validation analysis, Google Sheets logging, and email report generation using n8n, Gmail, OpenAI, and JavaScript.
-5. AI Competitor Intelligence Agent
-6. AI Attendance Intelligence Agent Using Airtable
-7. Instagram Post Automation
-8. AI Document Summarizer Agent
-9. AI Powered Personal Assistant in Telegram
-10. AI Maintenance Dispatch
+5. [AI Competitor Intelligence Agent](./AI-Competitor-Intelligence-Agent/) — Weekly competitor review analysis, sentiment analysis, SWOT analysis, and automated reporting.
+6. [AI Attendance Intelligence Agent Using Airtable](./AI-Attendance-Intelligence-Agent-Using-Airtable/) — Student attendance analysis, classification, and automated intelligence reports.
+7. [Instagram Post Automation](./Instagram-Post-Automation/) — Automates Instagram content publishing and post scheduling.
+8. [AI Document Summarizer Agent](./AI-Document-Summarizer-Agent/) — Extracts and summarizes document content using AI.
+9. [AI Powered Personal Assistant in Telegram](./AI-Powered-Personal-Assistant-in-Telegram/) — Telegram-based personal assistant supporting text and audio interactions.
+10. [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) — Automates maintenance request handling and dispatch workflows.
 
 ## Technologies Used
 
