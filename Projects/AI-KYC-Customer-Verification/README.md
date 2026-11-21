@@ -95,7 +95,7 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 
 ## Workflow Demonstration
 
-![Complete Workflow and Successful Execution](screenshots/kyc-workflow-demo.jpeg)
+![KYC Workflow and Successful Execution](screenshots/Successful%20Execution.jpeg)
 
 ## Workflow Export
 
