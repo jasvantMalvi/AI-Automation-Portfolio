@@ -1,0 +1,583 @@
+{
+  "name": "AI Powered Personal Assistant in Telegram-Audio and Text",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        16,
+        96
+      ],
+      "id": "41da656f-cafb-4d19-8baf-48ed65f904c2",
+      "name": "01 - Telegram Trigger",
+      "notes": "Select your existing Telegram Bot credential after importing."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const message = $json.message || {};\nconst chatId = message.chat?.id ?? null;\n\nlet inputType = 'unknown';\nlet userMessage = null;\nlet voiceFileId = null;\n\nif (typeof message.text === 'string' && message.text.trim()) {\n  inputType = 'text';\n  userMessage = message.text.trim();\n} else if (message.voice?.file_id) {\n  inputType = 'voice';\n  voiceFileId = message.voice.file_id;\n}\n\nreturn {\n  json: {\n    chatId,\n    userId: message.from?.id ?? null,\n    username: message.from?.username ?? null,\n    inputType,\n    userMessage,\n    voiceFileId\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        96
+      ],
+      "id": "47876400-6ee6-4a46-b24b-851e4617bcab",
+      "name": "02 - Normalize Telegram Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e669fd05-ea3c-4f77-bdf3-7742e396d941",
+              "leftValue": "={{ $json.inputType }}",
+              "rightValue": "voice",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        464,
+        96
+      ],
+      "id": "0649b31c-0462-4e08-ae15-bc9840c72135",
+      "name": "03 - Route Text or Voice"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.voiceFileId }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -32
+      ],
+      "id": "c6d0618f-a67f-4afa-a1a1-d3f13b0f9e18",
+      "name": "04 - Download Telegram Voice",
+      "notes": "Select the same Telegram Bot credential used by Telegram Trigger."
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        896,
+        -32
+      ],
+      "id": "046f3b19-56c8-439b-a0b3-894c07cfac58",
+      "name": "05 - Transcribe Voice Message",
+      "notes": "Select your OpenAI credential. If your installed node version uses different labels, choose Audio → Transcribe and use the binary file from Get a file."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bd00c02b-e0f5-4d8a-9356-aeb8454271a7",
+              "name": "chatId",
+              "value": "={{ $('02 - Normalize Telegram Input').first().json.chatId }}",
+              "type": "number"
+            },
+            {
+              "id": "65a1c081-0f73-4ef0-8a72-0ed578376b42",
+              "name": "userId",
+              "value": "={{ $('02 - Normalize Telegram Input').first().json.userId }}",
+              "type": "number"
+            },
+            {
+              "id": "625c1a02-f099-477c-a2b7-b20e16bc8640",
+              "name": "username",
+              "value": "={{ $('02 - Normalize Telegram Input').first().json.username }}",
+              "type": "string"
+            },
+            {
+              "id": "188f1ad6-a730-4408-b9ad-134eb039cfd7",
+              "name": "inputType",
+              "value": "voice",
+              "type": "string"
+            },
+            {
+              "id": "3ebd3257-47c6-4cc3-9aba-405d93ff7b77",
+              "name": "userMessage",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -32
+      ],
+      "id": "1dee82dd-7f0b-43f0-abb5-08b34fde5b42",
+      "name": "06 - Normalize Voice Transcript",
+      "notes": "Normalizes the voice transcription to the same userMessage field used by the text branch."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userMessage }}",
+        "options": {
+          "systemMessage": "You are a professional AI Personal Assistant operating through Telegram.\n\nYou help the user manage Notion tasks, Gmail emails, Google Calendar events, and Google Contacts.\n\nAVAILABLE TOOLS AND RULES\n\nNOTION — CREATE TASK\nUse \"Create a database page in Notion\" when the user asks to create, add, save, or remember a task.\nThe task title, due date, and priority are required. Priority must be High, Medium, or Low.\nIf date and/or priority are missing, ask for the missing information and DO NOT call the create tool yet.\nIf both are missing, ask for both in one concise message.\nInterpret relative dates using the current date and Asia/Kolkata timezone. Do not invent a date or priority.\nNew tasks should have status \"Not started\".\n\nNOTION — GET TASKS\nUse \"Get many database pages in Notion\" to view or retrieve saved tasks. Do not use it to create tasks.\n\nGMAIL — GET EMAILS\nUse \"Get many messages in Gmail\" to retrieve recent emails. Never invent email content or metadata.\nThis tool currently retrieves up to 10 messages; do not claim it searched all mail unless the tool's filters/search support that.\n\nGMAIL — SEND EMAIL\nUse \"Send a message in Gmail\" only when the user explicitly asks to send an email.\nThe recipient and message must be clear. Never guess an email address.\nBefore sending, show the recipient, subject, and message and ask for confirmation. Only send after confirmation.\n\nGOOGLE CALENDAR — CREATE EVENT\nUse \"Create an event in Google Calendar\" when the user asks to schedule an event.\nEvent title, date, start time, and end time are required. If any are missing, ask for them.\nInterpret relative dates using the current date and Asia/Kolkata timezone. Never invent dates or times.\nBefore creating an event, summarize the details and ask for confirmation.\n\nGOOGLE CALENDAR — GET EVENTS\nUse \"Get many events in Google Calendar\" to retrieve calendar events. The current node configuration searches from now through one week ahead; do not imply it covers dates outside that range.\n\nGOOGLE CONTACTS — CREATE CONTACT\nUse \"Create a contact in Google Contacts\" when the user asks to add a contact. A name is required.\nUse phone details only when supplied. Never invent contact information.\n\nGENERAL\n- The user may send typed text or voice transcribed to text. Treat both as the user's message.\n- Correct obvious transcription mistakes only when intent is clear. If uncertain, ask.\n- Use memory for follow-up messages such as \"yes\", \"tomorrow\", \"high priority\", or \"send it\" in context.\n- Perform read operations directly.\n- Never claim an action succeeded unless its tool returned success.\n- Ask only for missing required information.\n- Keep Telegram responses concise, clear, and professional.\n- Use Asia/Kolkata timezone unless the user specifies another timezone."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        112
+      ],
+      "id": "273830b7-2a80-4b40-bc0e-47b87f03fac9",
+      "name": "07 - AI Personal Assistant"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        240
+      ],
+      "id": "2e70ae33-9e9e-4382-aca7-db3ab863a7c1",
+      "name": "08 - OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('02 - Normalize Telegram Input').first().json.chatId }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        1168,
+        240
+      ],
+      "id": "aa1ac733-5bb5-4598-9ef3-5999c2d9028d",
+      "name": "09 - Telegram Conversation Memory",
+      "notes": "Session key uses Telegram chat ID. If this expression is empty in your n8n version, pass chatId into the Agent input and use the supported custom-key expression."
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create a new contact in the user's Google Contacts.\n\nUse this tool ONLY when the user explicitly asks to create, add, or save a new contact.\n\nCollect the person's given name and family name if provided. Use a phone number only when the user provides it. The person's name is required. Do not invent contact information. If the name is missing or the request is ambiguous, ask for clarification before creating the contact.",
+        "familyName": "={{ $fromAI('Family_Name', '', 'string') }}",
+        "givenName": "={{ $fromAI('Given_Name', '', 'string') }}",
+        "additionalFields": {
+          "phoneUi": {
+            "phoneValues": [
+              {
+                "type": "mobile",
+                "value": "={{ $fromAI('Phone_Number', '', 'string') }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleContactsTool",
+      "typeVersion": 1,
+      "position": [
+        976,
+        464
+      ],
+      "id": "66ee6fec-464d-4c13-bdda-eed494bb87ec",
+      "name": "10 - Create Google Contact"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Send an email through Gmail. Use only when the user explicitly asks to send an email. Recipient and message must be clear; never invent an email address. Ask the user to confirm the recipient, subject, and message before sending. If required details are missing, ask for them.",
+        "sendTo": "={{ $fromAI('To', '', 'string') }}",
+        "subject": "={{ $fromAI('Subject', '', 'string') }}",
+        "message": "={{ $fromAI('Message', '', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1136,
+        464
+      ],
+      "id": "c8eb4ed9-ed86-4f1e-a590-46313fecee49",
+      "name": "11 - Send Gmail Email"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Retrieve recent emails from the user's Gmail account when the user asks to view or read emails. This node currently returns up to 10 messages and has no configured search filters. Do not claim to have searched all mail or found a specific sender unless the returned results support it. Do not send, delete, or modify emails.",
+        "operation": "getAll",
+        "limit": 10,
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1296,
+        464
+      ],
+      "id": "be959a17-8d44-4c25-8ada-fad2614e2a03",
+      "name": "12 - Retrieve Gmail Emails"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create a task in the user's Notion task database. Use only when the user asks to create, add, save, or remember a task. Task title, due date, and priority are mandatory. If date or priority is missing, ask for the missing value and do not create the task yet. Priority should be High, Medium, or Low. Set Status to Not started. Do not invent a date or priority.",
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "YOUR_NOTION_DATA_SOURCE_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_NOTION_DATABASE",
+          "cachedResultUrl": ""
+        },
+        "title": "={{ $fromAI('Title', '', 'string') }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Date|date",
+              "range": "={{ $fromAI('Date_Range', 'Use false for a single due date', 'boolean') }}"
+            },
+            {
+              "key": "Priority|rich_text",
+              "textContent": "={{ $fromAI('Priority', 'High, Medium, or Low', 'string') }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "Not started"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notionTool",
+      "typeVersion": 3,
+      "position": [
+        1456,
+        464
+      ],
+      "id": "a7b4ba28-fbab-4ea0-8e4a-df17a7f9db66",
+      "name": "13 - Create Notion Task",
+      "notes": "Verify the Date property mapping in the imported node UI. The supplied source JSON exposed a range toggle but did not expose the actual date-value field; do not assume the due date is saved until tested."
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "YOUR_NOTION_DATA_SOURCE_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_NOTION_DATABASE",
+          "cachedResultUrl": ""
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notionTool",
+      "typeVersion": 3,
+      "position": [
+        1616,
+        464
+      ],
+      "id": "e46a10fe-2045-4f7f-bf76-70d1b599034d",
+      "name": "14 - Retrieve Notion Tasks"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Create an event in the user's Google Calendar. Use only when the user asks to schedule or create an event. Event title, date, start time, and end time are required. Ask for missing information; never invent dates or times. Confirm the event details with the user before creating it.",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_CALENDAR_ID"
+        },
+        "start": "={{ $fromAI('Start', 'Start date/time in ISO 8601 format with timezone', 'string') }}",
+        "end": "={{ $fromAI('End', 'End date/time in ISO 8601 format with timezone', 'string') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('Event_Title', 'Calendar event title', 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1776,
+        464
+      ],
+      "id": "5fef6ac9-c12b-410c-8642-bf6f5a2fc65b",
+      "name": "15 - Create Google Calendar Event",
+      "notes": "Verify that Summary is exposed under Additional Fields in your installed Google Calendar node version."
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Retrieve events from the user's Google Calendar. Use for requests about meetings, appointments, and schedules. This configuration searches from the current time through one week ahead only. Do not claim to cover dates outside this window.",
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_CALENDAR_ID"
+        },
+        "timeMax": "={{ $now.plus({week:1}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1936,
+        464
+      ],
+      "id": "c9f054d9-da3b-4ba8-a7ed-33d807153cd3",
+      "name": "16 - Retrieve Google Calendar Events"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('02 - Normalize Telegram Input').first().json.chatId }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        112
+      ],
+      "id": "92889ea5-3e52-46a6-acfa-1399b8e81a41",
+      "name": "17 - Reply on Telegram",
+      "notes": "Select the same Telegram Bot credential as the Trigger. Verify AI Agent output field is named output in your n8n version."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 - Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "02 - Normalize Telegram Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Normalize Telegram Input": {
+      "main": [
+        [
+          {
+            "node": "03 - Route Text or Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Route Text or Voice": {
+      "main": [
+        [
+          {
+            "node": "04 - Download Telegram Voice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Download Telegram Voice": {
+      "main": [
+        [
+          {
+            "node": "05 - Transcribe Voice Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Transcribe Voice Message": {
+      "main": [
+        [
+          {
+            "node": "06 - Normalize Voice Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Normalize Voice Transcript": {
+      "main": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - AI Personal Assistant": {
+      "main": [
+        [
+          {
+            "node": "17 - Reply on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 - Telegram Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 - Create Google Contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 - Send Gmail Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 - Retrieve Gmail Emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 - Create Notion Task": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 - Retrieve Notion Tasks": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 - Create Google Calendar Event": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 - Retrieve Google Calendar Events": {
+      "ai_tool": [
+        [
+          {
+            "node": "07 - AI Personal Assistant",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": []
+}
