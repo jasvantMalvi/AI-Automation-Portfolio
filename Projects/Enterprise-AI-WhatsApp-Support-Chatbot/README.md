@@ -106,3 +106,21 @@ Import the workflow JSON into n8n and configure your own credentials, IDs, datab
 - LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
 
 *Building smarter workflows. Automating repetitive tasks. Solving real-world problems.*
+
+---
+
+## Workflow Screenshots
+
+### 1. Workflow Overview
+
+![Workflow Overview](screenshots/workflow-overview.jpeg)
+
+### 2. Successful Execution
+
+![Successful Execution](screenshots/successful-execution.jpeg)
+
+## Workflow Export
+
+You can find the sanitized n8n workflow export here:
+
+[View workflow.json](workflow.json)
