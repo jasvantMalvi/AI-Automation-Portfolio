@@ -95,7 +95,7 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 
 ## Workflow Demonstration
 
-![Complete Workflow and Successful Execution](screenshots/YOUR-IMAGE-FILENAME.jpeg)
+[Complete Workflow and Successful Execution](screenshots/YOUR-IMAGE-FILENAME.jpeg)
 
 ## Workflow Export
 
