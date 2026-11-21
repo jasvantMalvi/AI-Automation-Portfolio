@@ -93,11 +93,7 @@ Import the workflow into n8n and configure your own credentials, spreadsheet IDs
 
 ## Workflow Screenshots
 
-### 1. Workflow Overview
-
-![Workflow Overview](screenshots/workflow-overview.jpeg)
-
-### 2. Successful Execution
+### 1. Successful Execution
 
 ![Successful Execution](screenshots/successful-execution.jpeg)
 
