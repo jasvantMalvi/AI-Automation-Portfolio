@@ -88,3 +88,19 @@ Import the workflow into n8n and configure your own credentials, spreadsheet IDs
 - LinkedIn: https://www.linkedin.com/in/jasvant-malviya-810305429
 
 *Building smarter workflows. Automating repetitive tasks. Solving real-world problems.*
+
+---
+
+## Workflow Screenshots
+
+### 1. Workflow Overview
+
+![Workflow Overview](screenshots/workflow-overview.jpeg)
+
+### 2. Successful Execution
+
+![Successful Execution](screenshots/successful-execution.jpeg)
+
+## Workflow Export
+
+[View sanitized n8n workflow](workflow.json)
