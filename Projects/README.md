@@ -41,6 +41,7 @@ Detailed project documentation will be added progressively.
 20. [AI Attendance Tracking Bot](./AI-Attendance-Tracking-Bot/) — Automates student attendance recording through WhatsApp using n8n and Google Sheets. Extracts sender details, records attendance with date and time, prevents duplicate daily entries, and sends automated confirmation messages.
 21. [Office Holiday Notifier](./Office-Holiday-Notifier/) — Checks an office holiday calendar daily using n8n and Google Sheets, identifies holidays approaching their configured notification lead time, and prepares combined HTML email announcements through Gmail.
 22. [New Enquiry Notifier Bot](./New-Enquiry-Notifier-Bot/) — Captures Google Form enquiries through Google Sheets, generates unique enquiry IDs, validates customer details, alerts the business owner through Telegram, and sends customer acknowledgement emails using n8n.
+23. [AI Astrologist or Pandit](./AI-Astrologist-or-Pandit/) — A WhatsApp-based astrology assistant built with n8n and OpenAI. Extracts user-provided birth details, generates Vedic astrology-style responses, asks for missing information, supports Hindi, English, and Hinglish, and replies through WhatsApp.
 
 ## Technologies Used
 
