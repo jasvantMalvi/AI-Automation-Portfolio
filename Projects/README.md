@@ -31,6 +31,7 @@ Detailed project documentation will be added progressively.
 10. [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) — Automates maintenance request handling and dispatch workflows.
 11. [AI-Powered WhatsApp Quiz Bot](./AI-Powered-WhatsApp-Quiz-Bot/README.md) — Sends sequential multiple-choice quiz questions over WhatsApp, checks answers, tracks participant progress, and reports scores using n8n and Google Sheets.
 12. [AI Smart To-Do List Automation](./AI-Smart-To-Do-List-Automation/) — Telegram-based AI task manager that adds, views, completes, and deletes tasks using an OpenAI-powered n8n AI Agent and Google Sheets.
+13. [Social Media Content Reminder Bot](./Social-Media-Content-Reminder-Bot/) — Automates scheduled social media content reminders using n8n, Telegram, and Google Sheets. Checks pending content every 30 minutes, tracks reminder counts, and allows users to mark content as completed through Telegram buttons.
 
 ## Technologies Used
 
