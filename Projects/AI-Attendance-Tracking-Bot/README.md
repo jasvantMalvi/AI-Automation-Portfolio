@@ -56,7 +56,7 @@ The duplicate check uses the combination of `mobile` and `date`. The workflow do
 ## Screenshots
 
 ### 1. n8n Workflow Architecture
-![Workflow Overview](screenshots/workflow-overview.png)
+![Workflow Overview](screensots/workflow-overview.png)
 
 ### 2. Google Sheets Attendance Records
 ![Attendance Google Sheet](screenshots/attendance-google-sheet.png)
