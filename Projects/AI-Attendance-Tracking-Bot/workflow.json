@@ -1,0 +1,410 @@
+{
+  "name": "AI Attendance Tracking Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -32
+      ],
+      "id": "66f2b879-6db6-4c8e-a53c-93f715489788",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get WhatsApp payload\nconst data = $input.first().json;\n\nconst contact = data.contacts?.[0] || {};\nconst message = data.messages?.[0] || {};\n\n// User details\nconst name = contact.profile?.name || \"\";\nconst mobile = message.from || contact.wa_id || \"\";\n\n// Attendance message\nconst attendance = (message.text?.body || \"\").trim();\n\n// Convert WhatsApp timestamp (UTC) to India Time\nconst dateObj = new Date(Number(message.timestamp) * 1000);\n\n// Format for India\nconst options = {\n  timeZone: \"Asia/Kolkata\",\n};\n\n// Date (DD/MM/YYYY)\nconst date = dateObj.toLocaleDateString(\"en-GB\", options);\n\n// Time (HH:MM:SS)\nconst time = dateObj.toLocaleTimeString(\"en-GB\", {\n  ...options,\n  hour12: false,\n});\n\n// ISO Timestamp\nconst timestamp = dateObj.toISOString();\n\nreturn [\n  {\n    json: {\n      name,\n      mobile,\n      attendance,\n      date,\n      time,\n      timestamp\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -32
+      ],
+      "id": "698b4edd-84f9-4565-84d1-7fd3902bcfb6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Attendance Tracking Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date",
+              "lookupValue": "={{ $json.date }}"
+            },
+            {
+              "lookupColumn": "mobile",
+              "lookupValue": "={{ $json.mobile }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        -32
+      ],
+      "id": "5969cba1-4152-4373-8ee1-620e8f9cb027",
+      "name": "Get row(s) in sheet",
+      "executeOnce": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f9630d05-3b8a-45c6-b384-06dce3f12730",
+              "leftValue": "={{ Object.keys($json).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        -32
+      ],
+      "id": "509863df-efae-468e-95c9-eb80ce594520",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Attendance Tracking Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Code in JavaScript').item.json.name }}",
+            "mobile": "={{ $('Code in JavaScript').item.json.mobile }}",
+            "date": "={{ $('Code in JavaScript').item.json.date }}",
+            "time": "={{ $('Code in JavaScript').item.json.time }}",
+            "attendance": "={{ $('Code in JavaScript').item.json.attendance }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mobile",
+              "displayName": "mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "attendance",
+              "displayName": "attendance",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        832,
+        -160
+      ],
+      "id": "6de4f786-2a66-42b8-942f-b786af957442",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "=✅ Attendance Recorded Successfully\n\nHello {{ $json.name }},\n\nYour attendance has been marked successfully.\n\n📅 Date: {{ $json.date }} \n🕒 Time: {{ $json.time }} \n📌 Status: {{ $json.attendance }}  \n\nThank you. Have a great day! 😊",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1056,
+        -160
+      ],
+      "id": "151ab730-4d90-4956-a5d4-109b0ef42409",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "=⚠️ Attendance Already Recorded\n\nHello {{ $json.name }},\n\nOur records show that your attendance has already been marked for today.\n\n📅 Date: {{ $json.date }}\n\nIf you believe this is incorrect, please contact your administrator.\n\nThank you! 😊",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        48
+      ],
+      "id": "dcb552be-83a4-42bf-9030-b9a876e078d7",
+      "name": "Send message1"
+    },
+    {
+      "parameters": {
+        "content": "Validate incoming messages before processing the workflow.",
+        "height": 112,
+        "width": 160,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -160
+      ],
+      "id": "f6cd6c53-c381-4ef8-83df-604052ee7c83",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Normalize and validate extracted data before passing it forward.",
+        "height": 80,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        96,
+        -144
+      ],
+      "id": "2281d0c6-92ec-43c0-aeb4-5ca557307aa6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Search using a unique Attendance ID instead of multiple columns to prevent multiple attendance.",
+        "height": 128,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -176
+      ],
+      "id": "94c778ad-50c5-4a2b-a994-a0c81a82d8bb",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Keep duplicate detection simple by checking for existing records only.",
+        "height": 112,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -160
+      ],
+      "id": "6d343f3d-656c-4d4d-964a-c87a6378611a",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Save only validated and standardized attendance records.",
+        "height": 80,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -256
+      ],
+      "id": "cef3169b-921e-4060-9e81-840013af1ee8",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Include attendance details with a clear confirmation message.",
+        "height": 96,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -272
+      ],
+      "id": "9e8e4e9f-d07f-4193-9f7f-38e4916f6358",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Politely notify users that today's attendance is already recorded.",
+        "height": 80,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        800,
+        208
+      ],
+      "id": "8e3f38b2-0232-4c1c-8b5f-adbfdfd4d675",
+      "name": "Sticky Note6"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
