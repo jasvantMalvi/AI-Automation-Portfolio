@@ -1,0 +1,244 @@
+{
+  "name": "Office Holiday Notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "37985dfd-dfbf-42b1-b4b5-ef76c03680a9",
+              "leftValue": "={{ $json.hasHoliday }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "5c080eb6-6fa3-4835-bb2c-c3ba9fcf4179",
+      "name": "Check Holiday Notification"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rows = $input.all();\n\nconst today = new Date(\n  new Date().toLocaleString(\"en-US\", {\n    timeZone: \"Asia/Kolkata\"\n  })\n);\n\ntoday.setHours(0, 0, 0, 0);\n\nconst upcomingHolidays = [];\n\nfor (const item of rows) {\n  const data = item.json;\n\n  // Read holiday details\n  const holidayName = data[\"Holiday Name\"];\n  const holidayDate = data[\"Holiday Date\"];\n  const notifyDays = Number(data[\"Notify Days Before\"] || 3);\n\n  // Skip incomplete records\n  if (!holidayName || !holidayDate) continue;\n\n  // Skip already sent notifications\n  if (\n    String(data[\"Notification Status\"] || \"\").toLowerCase() === \"sent\"\n  ) continue;\n\n  // Parse holiday date\n  const date = new Date(holidayDate);\n\n  if (isNaN(date.getTime())) continue;\n\n  date.setHours(0, 0, 0, 0);\n\n  // Calculate days remaining\n  const daysLeft = Math.round(\n    (date - today) / (1000 * 60 * 60 * 24)\n  );\n\n  // Select holidays matching notification days\n  if (daysLeft === notifyDays) {\n    upcomingHolidays.push({\n      name: holidayName,\n      date: date.toLocaleDateString(\"en-IN\"),\n      daysLeft\n    });\n  }\n}\n\n// Prepare one combined notification\nconst hasHoliday = upcomingHolidays.length > 0;\n\nconst holidayList = upcomingHolidays.map(holiday => `\n  <tr>\n    <td style=\"padding:12px;border:1px solid #ddd;\">\n      ${holiday.name}\n    </td>\n    <td style=\"padding:12px;border:1px solid #ddd;\">\n      ${holiday.date}\n    </td>\n    <td style=\"padding:12px;border:1px solid #ddd;\">\n      ${holiday.daysLeft} days\n    </td>\n  </tr>\n`).join(\"\");\n\nconst holidayNames = upcomingHolidays\n  .map(h => h.name)\n  .join(\", \");\n\nreturn [{\n  json: {\n    hasHoliday,\n    holidayCount: upcomingHolidays.length,\n    holidayNames,\n    emailSubject: `Upcoming Office Holiday Reminder - ${holidayNames}`,\n    emailBody: `\n      <div style=\"font-family:Arial,sans-serif;max-width:650px;margin:auto;color:#333;\">\n        <div style=\"background:#1f4e78;padding:22px;text-align:center;color:white;\">\n          <h2 style=\"margin:0;\">Office Holiday Announcement</h2>\n        </div>\n\n        <div style=\"padding:25px;\">\n          <p>Dear Team,</p>\n\n          <p>\n            This is a friendly reminder about the upcoming\n            office holiday(s). Please find the details below:\n          </p>\n\n          <table style=\"width:100%;border-collapse:collapse;text-align:left;\">\n            <tr style=\"background:#f0f3f6;\">\n              <th style=\"padding:12px;border:1px solid #ddd;\">Holiday</th>\n              <th style=\"padding:12px;border:1px solid #ddd;\">Date</th>\n              <th style=\"padding:12px;border:1px solid #ddd;\">Remaining</th>\n            </tr>\n            ${holidayList}\n          </table>\n\n          <p style=\"margin-top:22px;\">\n            Please plan your work accordingly and complete any\n            important tasks before the holiday.\n          </p>\n\n          <p>Wishing you a wonderful holiday!</p>\n\n          <p>\n            Regards,<br>\n            <strong>HR Department</strong>\n          </p>\n        </div>\n\n        <div style=\"background:#f0f3f6;padding:12px;text-align:center;font-size:12px;color:#777;\">\n          Automated notification from Office Holiday Notifier\n        </div>\n      </div>\n    `\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "c0f791de-a6ee-438c-8cea-b157ecebb5f4",
+      "name": "Filter Upcoming Holidays"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_RECIPIENT_EMAIL",
+        "subject": "={{ $json.emailSubject }}",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        -144
+      ],
+      "id": "67d085fa-7452-4e88-8bdf-c1bacbe974b6",
+      "name": "Send Holiday Notification"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "eea4cb32-56d2-4367-b407-2addb1cf57ac",
+      "name": "Daily Holiday Check"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Office Holidays Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Holidays"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "1b689ae4-ed01-4a0b-8a1a-bf327318b2f2",
+      "name": "Fetch Holiday Records"
+    },
+    {
+      "parameters": {
+        "content": "Runs automatically every day at 9 AM to check upcoming office holidays.",
+        "height": 272,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -96
+      ],
+      "id": "03a1a3d6-4e92-4b3e-97ba-bc4b5c75275e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Retrieves holiday details from the Google Sheets holiday database.",
+        "height": 272,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -96
+      ],
+      "id": "858f1847-1d9c-435b-bbfe-3f342668e4d1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Filters holidays based on notification days and notification status.",
+        "height": 272,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -96
+      ],
+      "id": "d32156fa-087a-4aaf-90c4-e4513f003054",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Checks whether any holiday notification needs to be sent.",
+        "height": 272,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        624,
+        -96
+      ],
+      "typeVersion": 1,
+      "id": "59c08819-1099-4b98-985c-2b292bf13c9a",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Sends a professional holiday announcement to employees via Gmail.",
+        "height": 272,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        864,
+        -224
+      ],
+      "id": "d2d62793-b4b2-45eb-a9e5-dd9f8d9c51ef",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Check Holiday Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Holiday Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Upcoming Holidays": {
+      "main": [
+        [
+          {
+            "node": "Check Holiday Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Holiday Check": {
+      "main": [
+        [
+          {
+            "node": "Fetch Holiday Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Holiday Records": {
+      "main": [
+        [
+          {
+            "node": "Filter Upcoming Holidays",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
