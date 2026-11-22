@@ -1,0 +1,462 @@
+{
+  "name": "AI Email Classifier by Priority Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -224,
+        -80
+      ],
+      "id": "76f7cf70-9825-4392-ab04-f47e77c5d5c6",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Classify the following email:\n\nSubject: {{ $json.Subject }}\nFrom: {{ $json.From }}\nEmail Body: {{ $json.snippet }}\n\nReturn exactly one line in this format:\nCategory | Priority | Summary",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an Email Classifier AI Agent.\n\nAnalyze the email and classify it into:\n- category\n- priority\n- summary\n\nPriority must be exactly one of: High, Medium, Low.\n\nCategory should be short and relevant, such as Security, Finance, Work, HR, Promotion, Newsletter, Support, etc.\n\nSummary must be one concise sentence describing the main purpose or action of the email.\n\nReturn only the required structured output. Do not add explanations or extra fields."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        -80
+      ],
+      "id": "6abdf77e-68af-4893-96ba-36f278fc2502",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        96
+      ],
+      "id": "2244d238-4ebd-442e-8c1c-9dc405648ce3",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"category\": \"Security\",\n  \"priority\": \"High\",\n  \"summary\": \"Suspicious login detected and immediate account security action is required.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        96
+      ],
+      "id": "f97ddd0d-f638-4f13-9754-3e26cfa1a87d",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.priority }}",
+                    "rightValue": "High",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ced87852-9c61-43ca-8658-a09871a18ae3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "High"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c0968c27-6fda-4125-9a4c-6efb210e456a",
+                    "leftValue": "={{ $json.output.priority }}",
+                    "rightValue": "Medium",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Medium"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bc1973e5-10af-4523-88b6-c5ff1a7d1740",
+                    "leftValue": "={{ $json.output.priority }}",
+                    "rightValue": "Low",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Low"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "bbb4ef05-e584-44a0-a60e-67cc3e0fe0ed",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REPLACE_WITH_YOUR_WHATSAPP_RECIPIENT_NUMBER",
+        "textBody": "=🚨 HIGH PRIORITY EMAIL ALERT\n\n📧 Category: {{ $('AI Agent').item.json.output.category }}\n⚠️ Priority: {{ $('AI Agent').item.json.output.priority }} \n\n📌 Subject: {{ $('Get a message').item.json.Subject }}\n👤 From: {{ $('Get a message').item.json.From }}\n🕐 Received: {{ $now.setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}\n\n📝 Summary: {{ $('AI Agent').item.json.output.summary }}\n\n🔴 Action Required: Please review this email immediately.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        -272
+      ],
+      "id": "d70689cd-9446-4dca-bd13-a49791d509a4",
+      "name": "High Priority Message Sender"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REPLACE_WITH_YOUR_WHATSAPP_RECIPIENT_NUMBER",
+        "textBody": "=⚠️ MEDIUM PRIORITY EMAIL  \n\n📧 Category: {{ $('AI Agent').item.json.output.category }}\n🟡 Priority: {{ $('AI Agent').item.json.output.priority }}\n\n📌 Subject: {{ $('Get a message').item.json.Subject }}\n👤 From: {{ $('Get a message').item.json.From }}\n🕐 Received: {{ $now.setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}\n\n📝 Summary: {{ $('AI Agent').item.json.output.summary }}\n\n🟡 Action Required: Please review this email when convenient.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        -80
+      ],
+      "id": "6353d4be-eedd-41e0-aa2d-4ea58fe05eb3",
+      "name": "Medium Priority Message Sender"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REPLACE_WITH_YOUR_WHATSAPP_RECIPIENT_NUMBER",
+        "textBody": "=ℹ️ LOW PRIORITY EMAIL \n\n📧 Category: {{ $('AI Agent').item.json.output.category }}\n🟢 Priority: {{ $('AI Agent').item.json.output.priority }}\n\n📌 Subject: {{ $('Get a message').item.json.Subject }}\n👤 From: {{ $('Get a message').item.json.From }}\n🕐 Received: {{ $now.setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}\n\n📝 Summary: {{ $('AI Agent').item.json.output.summary }} \n\n🟢 No immediate action required.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        112
+      ],
+      "id": "b3ffbba3-5c64-4f8a-8191-e96dee5812f7",
+      "name": "Low Priority Message Sender1"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        688
+      ],
+      "id": "2b4c2693-fd97-4c4a-8ea4-be6e01e69509",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "content": "Monitors Gmail and detects newly received emails automatically.",
+        "height": 112,
+        "width": 176,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -208
+      ],
+      "id": "44adcae4-7158-4fd1-82fa-923c14b5284a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Analyzes each email and determines its category, priority, and summary.",
+        "height": 112,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -208
+      ],
+      "id": "5a6b028f-a6e1-46cc-aee2-d1e99c810af9",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Provides the AI model used to classify and summarize emails.",
+        "height": 96,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        208
+      ],
+      "id": "df3552ac-e811-4ef7-9f15-c2e2fb5af598",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Converts the AI response into structured category, priority, and summary fields.",
+        "height": 128,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        128,
+        224
+      ],
+      "id": "352c771b-8e3c-4341-a602-3a5690af59bb",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Routes the email based on its High, Medium, or Low priority.",
+        "height": 112,
+        "width": 176,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -224
+      ],
+      "id": "a7d83a2f-6b0b-4c52-9278-55dfde4b1f06",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Sends an urgent WhatsApp alert for high-priority emails.",
+        "height": 96,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        -272
+      ],
+      "id": "9b272c2c-0a70-473a-b82f-8901c93731ce",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Sends a WhatsApp notification for medium-priority emails.",
+        "height": 112,
+        "width": 176,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        -80
+      ],
+      "id": "48f6e814-ed1f-42a0-8684-ef97906ba0dc",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Sends an informational WhatsApp notification for low-priority emails.",
+        "height": 128,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        112
+      ],
+      "id": "3a58fc57-5c65-4015-a489-ff532408b2a8",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "c5adde02-b620-4ca5-9e99-6807474c11e7",
+      "name": "Get a message"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "High Priority Message Sender",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Medium Priority Message Sender",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Low Priority Message Sender1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
