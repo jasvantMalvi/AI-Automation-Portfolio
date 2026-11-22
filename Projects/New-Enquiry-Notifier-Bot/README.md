@@ -106,10 +106,7 @@ If customer name or phone is missing, the workflow sends an invalid-enquiry aler
 ### 2. Google Sheets Form Responses
 ![Enquiry Form Responses Sheet](./screenshots/form-responses-sheet.jpeg)
 
-### 3. Telegram Owner Notification
-![Telegram New Enquiry Notification](./screenshots/telegram-owner-notification.jpeg)
-
-### 4. Customer Confirmation Email
+### 3. Customer Confirmation Email
 ![Customer Enquiry Confirmation Email](./screenshots/customer-confirmation-email.jpeg)
 
 ## Setup
