@@ -29,6 +29,7 @@ Detailed project documentation will be added progressively.
 8. [AI Document Summarizer Agent](./AI-Document-Summarizer-Agent/) — Extracts and summarizes document content using AI.
 9. [AI Powered Personal Assistant in Telegram](./AI-Powered-Personal-Assistant-in-Telegram/) — A conversational assistant supporting text and voice interactions, Gmail, Notion tasks, Google Calendar, and Google Contacts.
 10. [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) — Automates maintenance request handling and dispatch workflows.
+11. [AI-Powered WhatsApp Quiz Bot](./AI-Powered-WhatsApp-Quiz-Bot/README.md) — Sends sequential multiple-choice quiz questions over WhatsApp, checks answers, tracks participant progress, and reports scores using n8n and Google Sheets.
 
 ## Technologies Used
 
