@@ -39,6 +39,8 @@ Detailed project documentation will be added progressively.
 18. [AI Email Classifier by Priority Bot](./AI-Email-Classifier-by-Priority-Bot/) — Automatically monitors Gmail, classifies incoming emails by category and priority (High, Medium, Low), generates AI-powered summaries, and sends priority-based WhatsApp notifications using n8n, OpenAI, and the WhatsApp Business API.
 19. [Smart File Organizer Bot](./Smart-File-Organizer-Bot/) — Automatically organizes newly uploaded Google Drive files using n8n and OpenAI. Classifies files by type and moves them into designated folders for images, videos, documents, and other files.
 20. [AI Attendance Tracking Bot](./AI-Attendance-Tracking-Bot/) — Automates student attendance recording through WhatsApp using n8n and Google Sheets. Extracts sender details, records attendance with date and time, prevents duplicate daily entries, and sends automated confirmation messages.
+21. [Office Holiday Notifier](./Office-Holiday-Notifier/) — Checks an office holiday calendar daily using n8n and Google Sheets, identifies holidays approaching their configured notification lead time, and prepares combined HTML email announcements through Gmail.
+
     
 ## Technologies Used
 
