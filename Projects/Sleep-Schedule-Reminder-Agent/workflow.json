@@ -1,0 +1,518 @@
+{
+  "name": "Sleep Schedule Reminder Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        160
+      ],
+      "id": "5956f74a-8ff5-410d-8059-c70835a4294b",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -560,
+        -80
+      ],
+      "id": "48d7658b-8f4a-4109-8a4a-4dab234bbbc5",
+      "name": "Schedule Monitor"
+    },
+    {
+      "parameters": {
+        "content": "Triggers the workflow every minute to monitor the user's sleep schedule.",
+        "height": 240,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -608,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "e44ccd84-5b98-44d0-b616-1465e5062820",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Retrieves the user's bedtime, wake-up time and reminder preferences from Google Sheets.",
+        "height": 240,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -176
+      ],
+      "id": "01edeaa6-3fae-44ef-ae26-111584335618",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Sleep Schedule Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sleep_Schedule"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -320,
+        -80
+      ],
+      "id": "63edaf04-2707-4fc9-aa03-969981f28f3d",
+      "name": "Fetch Sleep Schedule",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rows = $input.all();\nconst output = [];\n\nconst timezone = 'Asia/Kolkata';\n\nconst parts = new Intl.DateTimeFormat('en-GB', {\n  timeZone: timezone,\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  hourCycle: 'h23'\n}).formatToParts(new Date());\n\nconst p = Object.fromEntries(parts.map(x => [x.type, x.value]));\n\nconst today = `${p.year}-${p.month}-${p.day}`;\nconst now = Number(p.hour) * 60 + Number(p.minute);\n\nfunction toMinutes(value) {\n  const match = String(value).trim().match(\n    /^(\\d{1,2}):(\\d{2})\\s*(AM|PM)$/i\n  );\n\n  if (!match) throw new Error(`Invalid time: ${value}`);\n\n  let h = Number(match[1]);\n  const m = Number(match[2]);\n\n  if (h < 1 || h > 12 || m > 59) {\n    throw new Error(`Invalid time: ${value}`);\n  }\n\n  h = h % 12;\n  if (match[3].toUpperCase() === 'PM') h += 12;\n\n  return h * 60 + m;\n}\n\nfor (const item of rows) {\n  const d = item.json;\n\n  const active = String(d.active).toUpperCase() === 'TRUE';\n\n  const bedtime = toMinutes(d.bedtime);\n  const wakeup = toMinutes(d.wakeup_time);\n  const before = Number(d.reminder_before || 30);\n\n  const bedtimeTarget = (bedtime - before + 1440) % 1440;\n\n  const bedtimeDiff = (now - bedtimeTarget + 1440) % 1440;\n  const wakeupDiff = (now - wakeup + 1440) % 1440;\n\n  let type = 'none';\n\n  if (active && bedtimeDiff <= 5 &&\n      d.last_bedtime_sent_date !== today) {\n    type = 'bedtime';\n  } else if (active && wakeupDiff <= 5 &&\n      d.last_wakeup_sent_date !== today) {\n    type = 'wakeup';\n  }\n\n  output.push({\n    json: {\n      ...d,\n      current_date: today,\n      current_minutes: now,\n      bedtime_reminder: bedtimeTarget,\n      reminder_type: type,\n      should_send: type !== 'none',\n      reminder_time: type === 'bedtime'\n        ? d.bedtime\n        : type === 'wakeup'\n        ? d.wakeup_time\n        : ''\n    }\n  });\n}\n\nreturn output;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -128,
+        -80
+      ],
+      "id": "264517b8-9bdb-4ecf-8082-20f2db1b196f",
+      "name": "Reminder Time Checker"
+    },
+    {
+      "parameters": {
+        "content": "Checks the current time and identifies whether a bedtime or wake-up reminder is due.",
+        "height": 240,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -176,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "1399bf70-5ceb-4390-95d9-3fca2a8b2bb4",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ce25523d-f68f-42d9-afef-cc89ebed7f6d",
+              "leftValue": "={{ $json.should_send }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        64,
+        -80
+      ],
+      "id": "be5ba9f4-629d-4c1e-95f9-c89ad4bd3fb5",
+      "name": "Reminder Due Filter"
+    },
+    {
+      "parameters": {
+        "content": "Allows only due reminders to proceed to the AI message generator.",
+        "height": 240,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        32,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "098d17ac-bf2f-436d-9916-f6e22b6732c6",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name: {{ $json.user_name }}\nReminder: {{ $json.reminder_type }}\nBedtime: {{ $json.bedtime }}\nWake-up: {{ $json.wakeup_time }}\n\nGenerate the appropriate reminder.",
+        "options": {
+          "systemMessage": "You are a professional Sleep Reminder Assistant.\n\nGenerate short and useful sleep notifications.\n\nFor bedtime:\nEncourage the user to prepare for sleep.\n\nFor wakeup:\nEncourage the user to start the morning.\n\nInclude 2 practical suggestions.\nUse a friendly and professional tone.\nKeep messages under 70 words.\nReturn only the final Telegram message."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        320,
+        -160
+      ],
+      "id": "bf32a827-e3e7-4de1-aabd-c048767fa141",
+      "name": "AI Sleep Message Generator"
+    },
+    {
+      "parameters": {
+        "content": "Generates personalized bedtime and morning reminders with practical sleep tips.",
+        "height": 240,
+        "width": 256,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        304,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "0d8130c7-ea2e-4cb9-aea1-066a7865772e",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\nPowers the AI Agent to generate clear and personalized sleep reminder messages.",
+        "height": 288,
+        "width": 192,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        96
+      ],
+      "typeVersion": 1,
+      "id": "1efb62b2-cf95-4a86-8203-2d6906cfb4c0",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Reminder Time Checker').item.json.telegram_chat_id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        -160
+      ],
+      "id": "957319e2-c8cb-4556-9e69-3aad88227531",
+      "name": "Telegram Notification"
+    },
+    {
+      "parameters": {
+        "content": "Sends the AI-generated sleep reminder directly to the user's Telegram account.",
+        "height": 272,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -272
+      ],
+      "id": "76aabcbf-6901-445e-aaac-a3ab1f16a1c7",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Updates the last-sent reminder date in Google Sheets to prevent duplicate notifications.",
+        "height": 272,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -272
+      ],
+      "id": "30fb79e6-bf53-48c9-98c0-2ddb778a80ca",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Sleep Schedule Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sleep_Schedule"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('Reminder Time Checker').item.json.user_id }}",
+            "last_bedtime_sent_date": "={{ $('Reminder Time Checker').first().json.reminder_type === 'bedtime' ? $('Reminder Time Checker').first().json.current_date : ($('Reminder Time Checker').first().json.last_bedtime_sent_date || '') }}",
+            "last_wakeup_sent_date": "={{ $('Reminder Time Checker').first().json.reminder_type === 'wakeup' ? $('Reminder Time Checker').first().json.current_date : ($('Reminder Time Checker').first().json.last_wakeup_sent_date || '') }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "user_name",
+              "displayName": "user_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "telegram_chat_id",
+              "displayName": "telegram_chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "bedtime",
+              "displayName": "bedtime",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "wakeup_time",
+              "displayName": "wakeup_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reminder_before",
+              "displayName": "reminder_before",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "timezone",
+              "displayName": "timezone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "active",
+              "displayName": "active",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "last_bedtime_sent_date",
+              "displayName": "last_bedtime_sent_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_wakeup_sent_date",
+              "displayName": "last_wakeup_sent_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        -160
+      ],
+      "id": "9ff3bce4-bb0c-4922-854a-230ff3a0fdc3",
+      "name": "Update Reminder Log"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Sleep Message Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Monitor": {
+      "main": [
+        [
+          {
+            "node": "Fetch Sleep Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Sleep Schedule": {
+      "main": [
+        [
+          {
+            "node": "Reminder Time Checker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder Time Checker": {
+      "main": [
+        [
+          {
+            "node": "Reminder Due Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder Due Filter": {
+      "main": [
+        [
+          {
+            "node": "AI Sleep Message Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Sleep Message Generator": {
+      "main": [
+        [
+          {
+            "node": "Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Update Reminder Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
