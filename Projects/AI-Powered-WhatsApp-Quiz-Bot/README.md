@@ -54,6 +54,13 @@ The workflow uses three sheets in one spreadsheet:
 
 `Phone_No`, `Question_ID`, `Student_Answer`, `Correct_Answer`, `Is_Correct`, `Score`, `Response_Time`
 
+## Workflow File
+
+**Download n8n Workflow JSON**
+
+[Download WhatsApp Quiz Bot Workflow](workflow.json) — Sanitized workflow export for importing into n8n.
+
+
 ## Screenshots
 
 ### n8n Workflow
