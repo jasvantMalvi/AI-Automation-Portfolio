@@ -1,0 +1,355 @@
+{
+  "name": "New Enquiry Notifier Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Customer Enquiry Responses Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1370658537,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -64
+      ],
+      "id": "f3d98eba-342a-44f6-b269-bbec8c4f0af6",
+      "name": "ENQUIRY CAPTURE"
+    },
+    {
+      "parameters": {
+        "content": "Captures new customer enquiries from Google Forms through Google Sheets.",
+        "height": 320,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -176
+      ],
+      "id": "46da1d21-7cfb-4adc-a641-a88196299195",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "42541d70-49ff-436b-ad49-d5e96b87f7d7",
+              "name": "Enquiry_ID",
+              "value": "=ENQ-{{$now.toMillis()}}",
+              "type": "string"
+            },
+            {
+              "id": "ea7772bb-e0d8-4dbd-aa6b-687f1e28d513",
+              "name": "Customer_Name",
+              "value": "={{ $json['Customer Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "b83b7075-5f18-48d6-8e07-568824fe7ef0",
+              "name": "Phone",
+              "value": "={{ $json['Phone Number'] }}",
+              "type": "number"
+            },
+            {
+              "id": "390c9eca-8a55-4739-a485-251fb80dc14c",
+              "name": "Email",
+              "value": "={{ $json['Email Address'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5943199c-da17-43a1-ad7b-19a3842b7b3d",
+              "name": "Service",
+              "value": "={{ $json['Service Required'] }}",
+              "type": "string"
+            },
+            {
+              "id": "7e92e522-9223-476a-a086-4d580e5390ec",
+              "name": "Message",
+              "value": "={{ $json['Enquiry Message'] }}",
+              "type": "string"
+            },
+            {
+              "id": "7018b3dd-9bb8-4ace-9e0d-bd7b59dfedfa",
+              "name": "Enquiry_Date",
+              "value": "={{$now.toISO()}}",
+              "type": "string"
+            },
+            {
+              "id": "db654341-76f5-43da-b4d8-99cc9ab7941a",
+              "name": "Status",
+              "value": "New",
+              "type": "string"
+            },
+            {
+              "id": "8684b616-56fe-431b-8b8a-d786ca6b4a66",
+              "name": "Source",
+              "value": "Google Form",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -192,
+        -64
+      ],
+      "id": "dc3c4b7b-9bfe-465d-a6fe-073e0ea5901a",
+      "name": "DATA PROCESSING"
+    },
+    {
+      "parameters": {
+        "content": "Organizes customer details and generates a unique enquiry ID.",
+        "height": 320,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -240,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "040ec421-94ca-42cb-be71-c3f8499eb8d6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d0c46053-b23b-4e70-beee-a1fee24b69ba",
+              "leftValue": "={{$json.Customer_Name}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "24f50f9a-1401-4d87-894b-c0069222ecc3",
+              "leftValue": "={{$json.Phone}}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        32,
+        -64
+      ],
+      "id": "a1685668-070d-4648-a10e-ecea1ff157df",
+      "name": "DATA VALIDATION"
+    },
+    {
+      "parameters": {
+        "content": "Checks customer name and phone number before processing.",
+        "height": 320,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -176
+      ],
+      "id": "1f313f83-16a6-4e77-944a-c81b5bbc72ac",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Sends instant customer enquiry details to the business owner via Telegram.",
+        "height": 304,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -368
+      ],
+      "id": "5a4a4028-1631-4f0a-b6e4-d5c1531cc4fd",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_OWNER_CHAT_ID",
+        "text": "=🚨 NEW CUSTOMER ENQUIRY\n\nEnquiry ID: {{$json.Enquiry_ID}}\nCustomer: {{$json.Customer_Name}}\nPhone: {{$json.Phone}}\nEmail: {{$json.Email}}\n\nService: {{$json.Service}}  \n\nMessage:\n{{$json.Message}}\n\nStatus: {{$json.Status}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        -256
+      ],
+      "id": "d65ba31a-b1d0-47ea-9c10-9d8f754f6e82",
+      "name": "OWNER NOTIFICATION"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('DATA PROCESSING').item.json.Email }}",
+        "subject": "We Have Received Your Enquiry!",
+        "message": "=<h2>Thank You for Contacting Us!</h2>  <p>Dear {{ $('DATA PROCESSING').item.json.Customer_Name }},</p>  <p>We have successfully received your enquiry.</p>  <p><b>Enquiry ID:</b> {{ $('DATA PROCESSING').item.json.Enquiry_ID }}</p>  <p><b>Service:</b> {{ $('DATA PROCESSING').item.json.Service }}</p>  <p>Our team will review your requirements and contact you shortly.</p>  <p>Best Regards,<br> Customer Support Team</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -256
+      ],
+      "id": "92b6a8f0-a517-4482-9216-fdf1b3738b0e",
+      "name": "CUSTOMER COMMUNICATION"
+    },
+    {
+      "parameters": {
+        "content": "Automatically sends an enquiry confirmation email to the customer.",
+        "height": 304,
+        "width": 192,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -368
+      ],
+      "id": "d6e46a2b-2358-4f5f-ae0c-5d5f4566137b",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Alerts the business owner when required customer information is missing.",
+        "height": 240,
+        "width": 224,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        32
+      ],
+      "id": "eefe8ba6-883a-4823-b17b-dfe89e97aa21",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_OWNER_CHAT_ID",
+        "text": "=⚠️ INVALID ENQUIRY RECEIVED  Customer: {{$json.Customer_Name}} Phone: {{$json.Phone}} Email: {{$json.Email}}  Some required information is missing.  Please check the original form response.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        304,
+        112
+      ],
+      "id": "81d739ce-7b8a-4ad4-9ade-9afd05e120b8",
+      "name": "ERROR HANDLING"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "ENQUIRY CAPTURE": {
+      "main": [
+        [
+          {
+            "node": "DATA PROCESSING",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DATA PROCESSING": {
+      "main": [
+        [
+          {
+            "node": "DATA VALIDATION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DATA VALIDATION": {
+      "main": [
+        [
+          {
+            "node": "OWNER NOTIFICATION",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ERROR HANDLING",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OWNER NOTIFICATION": {
+      "main": [
+        [
+          {
+            "node": "CUSTOMER COMMUNICATION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
