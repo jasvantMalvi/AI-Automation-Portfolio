@@ -59,10 +59,10 @@ The duplicate check uses the combination of `mobile` and `date`. The workflow do
 ![Workflow Overview](screensots/workflow-overview.png)
 
 ### 2. Google Sheets Attendance Records
-![Attendance Google Sheet](screenshots/attendance-google-sheet.png)
+![Attendance Google Sheet](screensots/attendance-google-sheet.png)
 
 ### 3. WhatsApp Attendance Confirmation and Duplicate Alert
-![WhatsApp Attendance Messages](screenshots/whatsapp-attendance-messages.png)
+![WhatsApp Attendance Messages](screensots/whatsapp-attendance-messages.png)
 
 ## Setup
 
