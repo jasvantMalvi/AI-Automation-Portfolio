@@ -1,0 +1,902 @@
+{
+  "name": "Smart Business Analyst Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                6
+              ],
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -288,
+        -80
+      ],
+      "id": "215598b1-729c-4503-8f86-b7ee74723b2d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Business Analytics Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -64,
+        -80
+      ],
+      "id": "c7b43d45-b3cb-45b7-af7b-36a95db7e9c9",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following business forecast and identify evidence-based business risks.\n\nFORECAST:\n\n{{ JSON.stringify($json) }}\n\nIdentify only risks supported by the available information.\n\nConsider:\n1. Revenue risk\n2. Product concentration\n3. Category concentration\n4. Geographic concentration\n5. Return/cancellation risk\n6. Weak-performing products\n7. Forecast uncertainty\n8. Data limitations\n\nDo not exaggerate risks.\n\nReturn only the required structured output.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Business Risk Analysis Agent.\n\nAnalyze the processed sales metrics, identified trends, and forecast.\n\nYour job is to identify business risks that management should be aware of.\n\nAnalyze:\n\n1. Revenue risk\n2. Sales decline risk\n3. Product concentration risk\n4. Category concentration risk\n5. Geographic concentration risk\n6. Return risk\n7. Cancellation risk\n8. Weak-performing product risk\n9. Forecast uncertainty\n10. Data quality risks\n\nFor every risk provide:\n\n- Risk name\n- Severity: Low, Medium, or High\n- Evidence\n- Business impact\n- Suggested action\n\nDo not exaggerate risks.\n\nA risk must be supported by the available data.\n\nReturn ONLY valid JSON.\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1776,
+        -80
+      ],
+      "id": "4f38d818-33c4-492a-b6c2-d99b96be4fe8",
+      "name": "Risk Analysis"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following processed sales data.\n\nPROCESSED SALES DATA:\n{{ JSON.stringify($json) }}\n\nOnly use the provided data.\n\nDo not invent historical comparisons.\nDo not invent numbers.\n\nIf historical comparison data is unavailable, clearly state that the analysis is based only on the current reporting period.\n\nDo not make forecasts.\n\nReturn the required structured output.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Business Trend Analysis Agent.\n\nAnalyze the processed weekly business metrics provided by the previous Data Processing Agent.\n\nYour responsibility is to identify meaningful sales patterns and changes.\n\nAnalyze:\n\n1. Revenue performance\n2. Order volume changes\n3. Category performance\n4. City performance\n5. Product performance\n6. Return and cancellation patterns\n7. Identify significant differences between categories, cities, products, order statuses, and other metrics within the provided reporting period.\n   Do not claim week-over-week, month-over-month, or historical growth unless historical comparison data is explicitly provided.\n8. Concentration of sales\n9. Positive trends\n10. Negative trends\n11. Anomalies\n\nIf historical comparison data is unavailable, state that the trend is based only on the current reporting period.\n\nDo not invent historical data that is not provided.\n\nClearly distinguish between:\n- Observed fact\n- Calculated change\n- Interpretation\n\nDo not make forecasts. Forecasting will be handled by another agent.\n\nReturn ONLY valid JSON.\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        768,
+        -80
+      ],
+      "id": "2c30ad27-0433-4d05-9840-b27f42ade8ea",
+      "name": "Trend Analysis"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create the final weekly business analysis report.\n\nDATA PROCESSING:\n{{ JSON.stringify($('Data Processing').item.json) }}\n\nTREND ANALYSIS:\n{{ JSON.stringify($('Trend Analysis').item.json) }}\n\nFORECAST:\n{{ JSON.stringify($('Forecasting Agent').item.json) }}\n\nRISK ANALYSIS:\n{{ JSON.stringify($('Risk Analysis').item.json) }}\n\nCreate a professional report suitable for sending to company management by email.\n\nReturn only valid JSON.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Professional Business Report Writer.\n\nCreate a concise, executive-level weekly business report using the provided analysis.\n\nThe report must contain:\n\n1. Executive Summary\n2. Key Performance Metrics\n3. Sales Trends\n4. Forecast\n5. Business Risks\n6. Recommended Actions\n7. Data Limitations\n\nWriting style:\n\n- Professional\n- Clear\n- Concise\n- Management-friendly\n- Data-driven\n- No unnecessary technical language\n\nNever invent numbers.\n\nEvery important numerical statement must come from the supplied analysis.\n\nRecommendations must be directly connected to identified trends or risks.\n\nReturn ONLY valid JSON.\n\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2224,
+        -80
+      ],
+      "id": "cc420924-c094-47e8-b559-805699a5ebe5",
+      "name": "Report Writer"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_REPORT_RECIPIENT_EMAIL",
+        "subject": "=📊 Weekly Sales & Business Analysis Report",
+        "message": "=<div style=\"margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#1f2937;\">\n\n  <div style=\"max-width:850px;margin:0 auto;padding:30px 15px;\">\n\n    <!-- HEADER -->\n    <div style=\"background:#111827;border-radius:14px 14px 0 0;padding:28px;color:#ffffff;\">\n\n      <div style=\"font-size:13px;color:#9ca3af;margin-bottom:8px;\">\n        WEEKLY BUSINESS INTELLIGENCE\n      </div>\n\n      <div style=\"font-size:26px;font-weight:bold;\">\n        📊 Weekly Business Analysis\n      </div>\n\n      <div style=\"font-size:14px;color:#d1d5db;margin-top:8px;\">\n        Automated weekly sales performance report\n      </div>\n\n    </div>\n\n\n    <!-- EXECUTIVE SUMMARY -->\n    <div style=\"background:#ffffff;padding:28px;border:1px solid #e5e7eb;\">\n\n      <h2 style=\"margin:0 0 12px 0;font-size:20px;\">\n        Executive Summary\n      </h2>\n\n      <p style=\"font-size:15px;line-height:1.7;margin:0;\">\n        {{ $json.output.executive_summary }}\n      </p>\n\n    </div>\n\n\n    <!-- KEY METRICS -->\n    <div style=\"background:#ffffff;padding:0 28px 28px 28px;border:1px solid #e5e7eb;border-top:0;\">\n\n      <h2 style=\"font-size:20px;margin:0 0 18px 0;\">\n        📈 Key Performance Metrics\n      </h2>\n\n      <table style=\"width:100%;border-collapse:collapse;\">\n\n        <tr style=\"background:#f9fafb;\">\n          <th style=\"padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;\">\n            Metric\n          </th>\n\n          <th style=\"padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;\">\n            Value\n          </th>\n\n          <th style=\"padding:12px;text-align:left;border-bottom:1px solid #e5e7eb;\">\n            Comparison\n          </th>\n        </tr>\n\n        {{\n$('Report Writer').item.json.output.key_metrics\n.map(metric => `\n<tr>\n<td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">\n${metric.metric}\n</td>\n<td style=\"padding:12px;border-bottom:1px solid #e5e7eb;font-weight:bold;\">\n${metric.value}\n</td>\n<td style=\"padding:12px;border-bottom:1px solid #e5e7eb;\">\n${metric.comparison || '-'}\n</td>\n</tr>\n`).join('')\n}}\n\n      </table>\n\n    </div>\n\n\n    <!-- TRENDS -->\n    <div style=\"background:#ffffff;padding:28px;border:1px solid #e5e7eb;border-top:0;\">\n\n      <h2 style=\"font-size:20px;margin:0 0 15px 0;\">\n        📈 Trend Highlights\n      </h2>\n\n      <ul style=\"padding-left:22px;line-height:1.8;margin:0;\">\n\n       {{\n$('Report Writer').item.json.output.trend_highlights\n.map(item => item.trend + ' — ' + item.evidence)\n.join(' • ')\n}}\n\n      </ul>\n\n    </div>\n\n\n    <!-- FORECAST -->\n    <div style=\"background:#ffffff;padding:28px;border:1px solid #e5e7eb;border-top:0;\">\n\n      <h2 style=\"font-size:20px;margin:0 0 12px 0;\">\n        🔮 Forecast\n      </h2>\n\n      <p style=\"font-size:15px;line-height:1.7;margin:0;\">\n        {{ $json.output.forecast_summary }}\n      </p>\n\n    </div>\n\n\n    <!-- RISK -->\n    <div style=\"background:#ffffff;padding:28px;border:1px solid #e5e7eb;border-top:0;\">\n\n      <h2 style=\"font-size:20px;margin:0 0 12px 0;\">\n        ⚠️ Risk Summary\n      </h2>\n\n      <p style=\"font-size:15px;line-height:1.7;margin:0;\">\n        {{ $json.output.risk_summary }}\n      </p>\n\n    </div>\n\n\n    <!-- RECOMMENDED ACTIONS -->\n    <div style=\"background:#ffffff;padding:28px;border:1px solid #e5e7eb;border-top:0;\">\n\n      <h2 style=\"font-size:20px;margin:0 0 15px 0;\">\n        🎯 Recommended Actions\n      </h2>\n\n      <ol style=\"padding-left:22px;line-height:1.8;margin:0;\">\n\n{{\n$('Report Writer').item.json.output.recommended_actions\n.map(item => item.action || item.recommendation || item.text || JSON.stringify(item))\n.join(' • ')\n}}\n\n      </ol>\n\n    </div>\n\n\n    <!-- FOOTER -->\n    <div style=\"background:#111827;color:#9ca3af;padding:22px;text-align:center;border-radius:0 0 14px 14px;font-size:12px;\">\n\n  <div style=\"text-align:center;margin:30px 0;\">\n\n  <a href=\"REPLACE_WITH_YOUR_LOOKER_STUDIO_DASHBOARD_URL\"\n     target=\"_blank\"\n     style=\"\n       display:inline-block;\n       background:#2563eb;\n       color:#ffffff;\n       text-decoration:none;\n       padding:14px 28px;\n       border-radius:8px;\n       font-family:Arial,Helvetica,sans-serif;\n       font-size:15px;\n       font-weight:bold;\n     \">\n     📊 View Live Business Dashboard\n  </a>\n\n</div>    \n\n<div style=\"color:#ffffff;font-weight:bold;margin-bottom:6px;\">\n        Business Intelligence Automation\n      </div>\n\n      Automatically generated by n8n\n\n      <br>\n\n      Please verify important figures against the source sales data.\n\n    </div>\n\n  </div>\n\n</div>\n\n\n\n\n\n\n\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2704,
+        -80
+      ],
+      "id": "eebc28ad-7624-4fba-8418-d3fb73a58ee7",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"trend_summary\": \"Overall sales performance remained positive during the reporting period.\",\n  \"positive_trends\": [\n    {\n      \"trend\": \"Electronics generated strong sales\",\n      \"evidence\": \"Electronics contributed 44% of net sales\",\n      \"impact\": \"Positive\"\n    }\n  ],\n  \"negative_trends\": [\n    {\n      \"trend\": \"Returns increased\",\n      \"evidence\": \"Return rate reached 5%\",\n      \"impact\": \"Negative\"\n    }\n  ],\n  \"category_trends\": [\n    {\n      \"category\": \"Electronics\",\n      \"performance\": \"Strong\",\n      \"observation\": \"Highest sales contribution\",\n      \"direction\": \"Up\"\n    }\n  ],\n  \"city_trends\": [\n    {\n      \"city\": \"Ahmedabad\",\n      \"performance\": \"Strong\",\n      \"observation\": \"Highest net sales contribution\",\n      \"direction\": \"Up\"\n    }\n  ],\n  \"product_trends\": [\n    {\n      \"product\": \"Wireless Mouse\",\n      \"performance\": \"Strong\",\n      \"observation\": \"High quantity and revenue contribution\",\n      \"direction\": \"Up\"\n    }\n  ],\n  \"customer_behavior_signals\": [\n    {\n      \"signal\": \"Low return activity\",\n      \"evidence\": \"Return rate is 5%\",\n      \"impact\": \"Low\"\n    }\n  ],\n  \"anomalies\": [\n    {\n      \"area\": \"Returns\",\n      \"observation\": \"Returned orders detected\",\n      \"severity\": \"Medium\"\n    }\n  ],\n  \"key_observations\": [\n    \"Electronics is a major contributor to sales.\",\n    \"Ahmedabad is one of the strongest cities.\",\n    \"Return activity should be monitored.\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        144
+      ],
+      "id": "ab23e744-1c96-46b5-8a9f-eabbb5ae5549",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"forecast_summary\": \"Sales are expected to remain stable to moderately positive if current patterns continue.\",\n  \"sales_direction\": \"Stable\",\n  \"order_direction\": \"Stable\",\n  \"category_forecasts\": [\n    {\n      \"category\": \"Electronics\",\n      \"forecast\": \"Positive\",\n      \"reason\": \"Strong current sales contribution\",\n      \"confidence\": \"Medium\"\n    }\n  ],\n  \"product_forecasts\": [\n    {\n      \"product\": \"Wireless Mouse\",\n      \"forecast\": \"Positive\",\n      \"reason\": \"Strong recent sales performance\",\n      \"confidence\": \"Medium\"\n    }\n  ],\n  \"revenue_forecast\": {\n    \"available\": true,\n    \"low\": 45000,\n    \"expected\": 50000,\n    \"high\": 55000,\n    \"currency\": \"INR\"\n  },\n  \"confidence\": \"Medium\",\n  \"assumptions\": [\n    \"Current sales patterns continue.\",\n    \"No major disruption affects sales.\"\n  ],\n  \"limitations\": [\n    \"Forecast confidence is limited by the available historical data.\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        144
+      ],
+      "id": "0321a9b0-0f05-42de-bfee-b2a7fc7e2377",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"overall_risk_level\": \"\",\n  \"risks\": [\n    {\n      \"risk\": \"\",\n      \"severity\": \"\",\n      \"evidence\": \"\",\n      \"impact\": \"\",\n      \"suggested_action\": \"\"\n    }\n  ],\n  \"risk_summary\": \"\",\n  \"data_limitations\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2032,
+        128
+      ],
+      "id": "79e22573-9f74-4884-bc8a-838e5e5bbd57",
+      "name": "Structured Output Parser3"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"report_title\": \"\",\n  \"executive_summary\": \"\",\n  \"key_metrics\": [\n    {\n      \"metric\": \"\",\n      \"value\": \"\",\n      \"comparison\": \"\"\n    }\n  ],\n  \"trend_highlights\": [],\n  \"forecast_summary\": \"\",\n  \"risk_summary\": \"\",\n  \"recommended_actions\": [],\n  \"data_limitations\": []\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        2416,
+        128
+      ],
+      "id": "9c0b8ca4-49d3-4a1e-bc85-f79ab8b125a2",
+      "name": "Structured Output Parser4"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Business Analytics Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 559328693,
+          "mode": "list",
+          "cachedResultName": "Weekly_Summary"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Report_Date": "={{ $('Data Processing').item.json.period.end_date }}",
+            "Week_Start": "={{ $('Data Processing').item.json.period.start_date }}",
+            " Week_End": "={{ $('Data Processing').item.json.period.end_date }}",
+            "Total_Orders": "={{ $('Data Processing').item.json.overall_metrics.total_orders }}",
+            "Completed_Orders": "={{ $('Data Processing').item.json.overall_metrics.completed_orders }}",
+            "Cancelled_Orders": "={{ $('Data Processing').item.json.overall_metrics.cancelled_orders }}",
+            "Returned_Orders": "={{ $('Data Processing').item.json.overall_metrics.returned_orders }}",
+            "Gross_Sales": "={{ $('Data Processing').item.json.overall_metrics.gross_sales }}",
+            " Discounts": "={{ $('Data Processing').item.json.overall_metrics.total_discounts }}",
+            "Net_Sales": "={{ $('Data Processing').item.json.overall_metrics.net_sales }}",
+            " Average_Order_Value": "={{ $('Data Processing').item.json.overall_metrics.average_order_value }}",
+            "Return_Rate": "={{ $('Data Processing').item.json.status_metrics.return_rate }}",
+            " Cancellation_Rate": "={{ $('Data Processing').item.json.status_metrics.cancellation_rate }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Report_Date",
+              "displayName": "Report_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Week_Start",
+              "displayName": "Week_Start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Week_End",
+              "displayName": " Week_End",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total_Orders",
+              "displayName": "Total_Orders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Completed_Orders",
+              "displayName": "Completed_Orders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cancelled_Orders",
+              "displayName": "Cancelled_Orders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Returned_Orders",
+              "displayName": "Returned_Orders",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Gross_Sales",
+              "displayName": "Gross_Sales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Discounts",
+              "displayName": " Discounts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Net_Sales",
+              "displayName": "Net_Sales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Average_Order_Value",
+              "displayName": " Average_Order_Value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Return_Rate",
+              "displayName": "Return_Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Cancellation_Rate",
+              "displayName": " Cancellation_Rate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2704,
+        -304
+      ],
+      "id": "5143a21b-fe0f-4e15-9d83-d17d50bd1309",
+      "name": "📊 Save Weekly Summary"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Business Analytics Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1434192771,
+          "mode": "list",
+          "cachedResultName": "AI_Analysis"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Report_Date": "={{ $('Data Processing').item.json.period.end_date }}",
+            "Trend": "={{\n$('Report Writer').item.json.output.trend_highlights\n.map(item => item.trend + ' — ' + item.evidence)\n.join(' • ')\n}}",
+            "Forecast": "={{ $('Report Writer').item.json.output.forecast_summary }}",
+            "Risk_Summary": "={{ $('Risk Analysis').item.json.output.risk_summary }}",
+            "Risk_Level": "={{ $('Risk Analysis').item.json.output.overall_risk_level }}",
+            "Actions": "={{\n$('Report Writer').item.json.output.recommended_actions\n.map(item => item.action || item.recommendation || item.text || JSON.stringify(item))\n.join(' • ')\n}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Report_Date",
+              "displayName": "Report_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Trend",
+              "displayName": "Trend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Forecast",
+              "displayName": "Forecast",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Risk_Level",
+              "displayName": "Risk_Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Risk_Summary",
+              "displayName": "Risk_Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Actions",
+              "displayName": "Actions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2704,
+        112
+      ],
+      "id": "267d4206-2eac-4a86-a72e-6a44ab8ac867",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        144
+      ],
+      "id": "bf5d6600-089c-40b6-bb78-49a82708d567",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1184,
+        144
+      ],
+      "id": "0b8a494f-a55f-403d-8466-2055c6c39402",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1680,
+        144
+      ],
+      "id": "8a5ac7e1-aece-4f86-8d08-5a80d30e8a05",
+      "name": "OpenAI Chat Model3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2192,
+        128
+      ],
+      "id": "bcadaa77-1384-41f0-af81-de00f4457b9d",
+      "name": "OpenAI Chat Model4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a short-term business forecast based on the following trend analysis.\n\nTREND ANALYSIS:\n\n{{ JSON.stringify($json) }}\n\nUse only the information provided.\n\nIf there is not enough historical data for a reliable numerical forecast, provide a qualitative forecast instead.\n\nDo not invent numbers.\n\nClearly mention forecast limitations.\n\nReturn the required structured output.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Business Forecasting Agent.\n\nUse the provided processed sales metrics and trend analysis to produce a short-term business forecast.\n\nForecast:\n\n1. Expected near-term sales direction\n2. Expected order-volume direction\n3. Categories likely to grow\n4. Categories showing possible weakness\n5. Products showing momentum\n6. Potential revenue range if enough historical information exists\n7. Forecast confidence\n8. Assumptions\n\nRules:\n\n- Never invent historical data.\n- Never present uncertain estimates as facts.\n- If insufficient historical data exists, explicitly state that.\n- Use conservative reasoning.\n- Do not claim statistical accuracy unless sufficient historical data exists.\n- Separate observations from forecasts.\n\nReturn ONLY valid JSON.\n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1280,
+        -80
+      ],
+      "id": "66a9bf23-d624-4b71-9eb1-1b030d2875d2",
+      "name": "Forecasting Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.sales_data || [];\n\nconst startDate = $json.report_period?.start || \"\";\nconst endDate = $json.report_period?.end || \"\";\n\nlet totalOrders = data.length;\nlet completedOrders = 0;\nlet cancelledOrders = 0;\nlet returnedOrders = 0;\n\nlet totalQuantity = 0;\nlet grossSales = 0;\nlet totalDiscounts = 0;\nlet netSales = 0;\nlet realizedSales = 0;\n\nconst categories = {};\nconst cities = {};\nconst products = {};\n\nfor (const row of data) {\n\n  const quantity = Number(row.Quantity) || 0;\n  const price = Number(row.Unit_Price_INR) || 0;\n  const discount = Number(row.Discount_INR) || 0;\n\n  const gross = quantity * price;\n  const net = gross - discount;\n\n  totalQuantity += quantity;\n  grossSales += gross;\n  totalDiscounts += discount;\n  netSales += net;\n\n  const status = String(row.Status || \"\").toLowerCase();\n\n  if (status === \"completed\") {\n    completedOrders++;\n    realizedSales += net;\n  }\n\n  if (status === \"cancelled\") {\n    cancelledOrders++;\n  }\n\n  if (status === \"returned\") {\n    returnedOrders++;\n  }\n\n  const category = row.Category || \"Unknown\";\n\n  if (!categories[category]) {\n    categories[category] = {\n      orders: 0,\n      quantity: 0,\n      net_sales: 0\n    };\n  }\n\n  categories[category].orders++;\n  categories[category].quantity += quantity;\n  categories[category].net_sales += net;\n\n\n  const city = row.City || \"Unknown\";\n\n  if (!cities[city]) {\n    cities[city] = {\n      orders: 0,\n      net_sales: 0\n    };\n  }\n\n  cities[city].orders++;\n  cities[city].net_sales += net;\n\n\n  const product = row.Product || \"Unknown\";\n\n  if (!products[product]) {\n    products[product] = {\n      quantity: 0,\n      net_sales: 0\n    };\n  }\n\n  products[product].quantity += quantity;\n  products[product].net_sales += net;\n}\n\nconst completionRate =\n  totalOrders ? (completedOrders / totalOrders) * 100 : 0;\n\nconst cancellationRate =\n  totalOrders ? (cancelledOrders / totalOrders) * 100 : 0;\n\nconst returnRate =\n  totalOrders ? (returnedOrders / totalOrders) * 100 : 0;\n\nconst averageOrderValue =\n  completedOrders ? realizedSales / completedOrders : 0;\n\nconst averageSellingPrice =\n  totalQuantity ? realizedSales / totalQuantity : 0;\n\nconst categoryList = Object.entries(categories)\n  .map(([category, value]) => ({\n    category,\n    orders: value.orders,\n    quantity: value.quantity,\n    net_sales: value.net_sales\n  }))\n  .sort((a, b) => b.net_sales - a.net_sales);\n\nconst cityList = Object.entries(cities)\n  .map(([city, value]) => ({\n    city,\n    orders: value.orders,\n    net_sales: value.net_sales\n  }))\n  .sort((a, b) => b.net_sales - a.net_sales);\n\nconst productList = Object.entries(products)\n  .map(([product, value]) => ({\n    product,\n    quantity_sold: value.quantity,\n    net_sales: value.net_sales\n  }))\n  .sort((a, b) => b.net_sales - a.net_sales);\n\nreturn [{\n  json: {\n    period: {\n      start_date: startDate,\n      end_date: endDate\n    },\n\n    overall_metrics: {\n      total_orders: totalOrders,\n      completed_orders: completedOrders,\n      cancelled_orders: cancelledOrders,\n      returned_orders: returnedOrders,\n      total_quantity: totalQuantity,\n      gross_sales: grossSales,\n      total_discounts: totalDiscounts,\n      net_sales: netSales,\n      realized_sales: realizedSales,\n      average_order_value: averageOrderValue,\n      average_selling_price: averageSellingPrice\n    },\n\n    status_metrics: {\n      completion_rate: completionRate,\n      cancellation_rate: cancellationRate,\n      return_rate: returnRate\n    },\n\n    sales_by_category: categoryList,\n\n    sales_by_city: cityList,\n\n    top_products: productList.slice(0, 5),\n\n    lowest_products: productList.slice(-5).reverse(),\n\n    data_quality_notes: [\n      \"Metrics calculated directly from the provided sales dataset.\"\n    ]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -80
+      ],
+      "id": "89e72417-5860-4ba3-b4f5-700711dbc6ec",
+      "name": "Data Processing"
+    },
+    {
+      "parameters": {
+        "content": "⏰ WEEKLY AUTOMATION\n\nRuns automatically every Saturday at 7:00 PM.\n\nPurpose:\nStart the weekly Business Analysis workflow automatically.",
+        "height": 432,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -272
+      ],
+      "id": "87243e8b-b7c5-4f86-90c9-af07f8c62e04",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "📊 SALES DATA COLLECTION\n\nGet all sales records from Google Sheets.\n\nSource:\nSales Data Sheet\n\nPurpose:\nCollect the latest sales transactions for weekly analysis.",
+        "height": 432,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        -288
+      ],
+      "id": "fab6165c-73d7-4e7c-a0c5-194f4bd1fc61",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "🧹 WEEKLY DATA PREPARATION\n\nFilter sales records for the current 7-day reporting period.\n\nOutput:\n• Reporting period\n• Valid sales rows\n• Generated timestamp\n\nPurpose:\nPrepare only the relevant weekly sales data for analysis.",
+        "height": 496,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -336
+      ],
+      "id": "6d3f8f4d-f17c-4e47-8ad2-fb4346261355",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(item => item.json);\n\nconst now = new Date();\n\n// Last 7 days including today\nconst startDate = new Date(now);\nstartDate.setDate(startDate.getDate() - 6);\nstartDate.setHours(0, 0, 0, 0);\n\nconst endDate = new Date(now);\nendDate.setHours(23, 59, 59, 999);\n\nconst weeklyRows = rows.filter(row => {\n  if (!row.Order_Date) return false;\n\n  const orderDate = new Date(row.Order_Date);\n\n  return orderDate >= startDate && orderDate <= endDate;\n});\n\nreturn [\n  {\n    json: {\n      report_period: {\n        start: startDate.toISOString().split('T')[0],\n        end: endDate.toISOString().split('T')[0]\n      },\n\n      generated_at: now.toISOString(),\n\n      total_rows: weeklyRows.length,\n\n      sales_data: weeklyRows\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -80
+      ],
+      "id": "368bc1d4-c32c-4155-9e7d-5b9677284e20",
+      "name": "Weekly  Data"
+    },
+    {
+      "parameters": {
+        "content": "⚙️ DATA PROCESSING\n\nConvert raw sales data into clean business metrics.\n\nCalculates:\n• Total Orders\n• Completed / Cancelled / Returned Orders\n• Gross Sales\n• Discounts\n• Net Sales\n• AOV\n• Average Selling Price\n• Category Performance\n• City Performance\n• Product Performance\n\nPurpose:\nCreate reliable structured data for the AI agents.",
+        "height": 624,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -464
+      ],
+      "id": "5d274258-c3ff-4823-bb98-032dde955fde",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "📈 TREND ANALYSIS — AI AGENT\n\nAnalyze the processed sales data.\n\nIdentifies:\n• Revenue patterns\n• Order patterns\n• Category trends\n• City trends\n• Product trends\n• Returns & cancellations\n• Sales concentration\n• Positive / negative trends\n• Anomalies\n\nRule:\nUse only available data.\nDo not invent historical comparisons.",
+        "height": 736,
+        "width": 448,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -416
+      ],
+      "id": "0ec43618-1337-4fb8-8c95-804c2f878d93",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "🔮 FORECASTING — AI AGENT\n\nUse the Trend Analysis output to create a short-term business forecast.\n\nAnalyzes:\n• Sales direction\n• Order direction\n• Category outlook\n• Product momentum\n• Revenue outlook\n• Forecast confidence\n• Assumptions\n• Limitations\n\nRule:\nIf historical data is insufficient, provide a qualitative forecast.\nNever invent numbers.",
+        "height": 736,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        -416
+      ],
+      "id": "db5c29a2-8116-4b94-9e99-38cdb6726b5c",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "⚠️ RISK ANALYSIS — AI AGENT\n\nIdentify evidence-based business risks from the forecast.\n\nChecks:\n• Revenue risk\n• Product concentration\n• Category concentration\n• Geographic concentration\n• Return / cancellation risk\n• Weak products\n• Forecast uncertainty\n• Data quality\n\nFor each risk:\nRisk → Severity → Evidence → Impact → Action\n\nRule:\nDo not exaggerate risks.",
+        "height": 720,
+        "width": 496,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        -416
+      ],
+      "id": "9b1bae2b-d85f-495e-a399-d49f90b80e52",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "📝 REPORT WRITER — AI AGENT\n\nConvert the analysis into a concise management report.\n\nReport includes:\n• Executive Summary\n• Key Metrics\n• Trend Highlights\n• Forecast\n• Risk Summary\n• Recommended Actions\n• Data Limitations\n\nStyle:\nProfessional • Clear • Concise • Data-driven\n\nRule:\nNever invent numbers.",
+        "height": 736,
+        "width": 368,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        -432
+      ],
+      "id": "4404c8cc-7f88-43d5-ba31-3c01de2d2be9",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "📤 REPORT DELIVERY\n\nAfter the report is generated:\n\n1. 📧 Send weekly report by Gmail\n2. 📊 Save weekly metrics to Google Sheets\n3. 🤖 Save AI analysis to Google Sheets\n4. 📈 Looker Studio reads the Google Sheets data\n\nGmail report includes:\n• Business summary\n• Key metrics\n• Trends\n• Forecast\n• Risks\n• Actions\n• Live Dashboard button",
+        "height": 928,
+        "width": 368,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        -624
+      ],
+      "id": "e25e88c4-82e5-47a8-8cc9-fbd9f419f0f9",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Weekly  Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Analysis": {
+      "main": [
+        [
+          {
+            "node": "Report Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trend Analysis": {
+      "main": [
+        [
+          {
+            "node": "Forecasting Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Report Writer": {
+      "main": [
+        [
+          {
+            "node": "📊 Save Weekly Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Trend Analysis",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Forecasting Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser3": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Risk Analysis",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Report Writer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📊 Save Weekly Summary": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Trend Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Forecasting Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Risk Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Report Writer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Forecasting Agent": {
+      "main": [
+        [
+          {
+            "node": "Risk Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Processing": {
+      "main": [
+        [
+          {
+            "node": "Trend Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly  Data": {
+      "main": [
+        [
+          {
+            "node": "Data Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
