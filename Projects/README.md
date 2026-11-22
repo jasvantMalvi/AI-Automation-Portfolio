@@ -33,7 +33,7 @@ Detailed project documentation will be added progressively.
 12. [AI Smart To-Do List Automation](./AI-Smart-To-Do-List-Automation/) — Telegram-based AI task manager that adds, views, completes, and deletes tasks using an OpenAI-powered n8n AI Agent and Google Sheets.
 13. [Social Media Content Reminder Bot](./Social-Media-Content-Reminder-Bot/) — Automates scheduled social media content reminders using n8n, Telegram, and Google Sheets. Checks pending content every 30 minutes, tracks reminder counts, and allows users to mark content as completed through Telegram buttons.
 14. [Smart Grocery Budget Optimizer Bot](./Smart-Grocery-Budget-Optimizer-Bot/) — An AI-powered Telegram grocery assistant that estimates shopping costs, compares expenses with a specified budget, suggests cheaper alternatives, and logs user requests in Google Sheets using n8n and OpenAI.
-
+15. [Smart Business Analyst Bot](./Smart-Business-Analyst-Bot/) — Automates weekly sales analysis using n8n, Google Sheets, and OpenAI. Calculates business KPIs, identifies sales trends, generates forecasts, assesses business risks, and delivers management reports through Gmail with a Looker Studio dashboard.
 
 ## Technologies Used
 
