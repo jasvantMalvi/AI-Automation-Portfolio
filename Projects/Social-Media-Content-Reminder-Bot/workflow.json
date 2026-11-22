@@ -1,0 +1,540 @@
+{
+  "name": "Social Media Content Reminder Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "afd4c3b7-30b5-49ca-b387-ddee9fe91b16",
+      "name": "01 - Reminder Scheduler",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Social Media Content Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "id": "d6e8328e-4cad-428f-a69b-a1d68b6168bc",
+      "name": "02 - Fetch Pending Tasks",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -144,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst output = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n\n  // Get ID safely — handles \"ID\" and \"ID \" column names\n  const id = data['ID'] ?? data['ID '] ?? '';\n\n  const rowNumber = data.row_number;\n  const name = data.Name;\n  const platform = data.Platform;\n  const pendingWork = data['Pending Work'];\n  const scheduledTime = data['Scheduled Time'];\n  const status = String(data.Status || '').trim().toLowerCase();\n\n  const reminderCount =\n    parseInt(data['Reminder Count'], 10) || 0;\n\n  // Only process Pending rows\n  if (status !== 'pending') {\n    continue;\n  }\n\n  // Make sure Scheduled Time exists\n  if (!scheduledTime) {\n    continue;\n  }\n\n  // Convert \"2026-08-21 09:30\" to India timezone\n  const scheduledDate = new Date(\n    scheduledTime.replace(' ', 'T') + ':00+05:30'\n  );\n\n  // Skip invalid dates\n  if (isNaN(scheduledDate.getTime())) {\n    continue;\n  }\n\n  // Scheduled time has not arrived yet\n  if (scheduledDate > now) {\n    continue;\n  }\n\n  // Calculate how long the content has been pending\n  const minutesPending = Math.floor(\n    (now - scheduledDate) / 60000\n  );\n\n  // First reminder immediately after scheduled time\n  // Then every 30 minutes\n  const expectedReminderCount =\n    Math.floor(minutesPending / 30) + 1;\n\n  // Already sent the reminder for this period\n  if (reminderCount >= expectedReminderCount) {\n    continue;\n  }\n\n  const nextReminderCount = reminderCount + 1;\n\n  const reminderMessage =\n    `🔔 Content Reminder\\n\\n` +\n    `Hi ${name}, your ${platform} content is still pending.\\n\\n` +\n    `📌 Content: ${pendingWork}\\n` +\n    `⏰ Scheduled: ${scheduledTime}\\n` +\n    `⏳ Pending for: ${minutesPending} minutes\\n` +\n    `🔁 Reminder #${nextReminderCount}\\n\\n` +\n    `Please post it when ready.\\n\\n` +\n    `This message was sent automatically with n8n`;\n\n  output.push({\n    json: {\n      ID: id,\n      rowNumber: rowNumber,\n      Name: name,\n      Platform: platform,\n      'Pending Work': pendingWork,\n      'Scheduled Time': scheduledTime,\n      Status: 'Pending',\n      'Reminder Count': reminderCount,\n      nextReminderCount: nextReminderCount,\n      minutesPending: minutesPending,\n      reminderMessage: reminderMessage,\n      checkedAt: now.toISOString()\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "e5bf2292-894c-4b6b-ab67-6e4c3368c67c",
+      "name": "03 - Check Reminder Conditions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        128
+      ],
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "923f39af-a140-4ba2-8ed6-80290fc108ea",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6116bfb-fe13-426f-a3b6-8239a592956c",
+      "name": "04 - Check Reminder Eligibility",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        304,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.reminderMessage }}",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Completed✅",
+                    "additionalFields": {
+                      "callback_data": "=completed:{{ $json.ID }}"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        0
+      ],
+      "id": "66ef209f-9cf2-4266-8f38-8bcc35a33a38",
+      "name": "05 - Send Telegram Reminder",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Social Media Content Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Reminder Count": "={{ $('03 - Check Reminder Conditions').first().json.nextReminderCount }}",
+            "Created At": "={{ $now.setZone('Asia/Kolkata').toFormat('dd/MM/yyyy HH:mm:ss') }}",
+            "ID": "={{ $('03 - Check Reminder Conditions').first().json.ID }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pending Work",
+              "displayName": "Pending Work",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Scheduled Time",
+              "displayName": "Scheduled Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reminder Count",
+              "displayName": "Reminder Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Completed At",
+              "displayName": "Completed At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        0
+      ],
+      "id": "24f4de9b-4a42-4566-8ef3-d62a86966888",
+      "name": "06 - Update Reminder Count"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "callback_query"
+        ],
+        "additionalFields": {}
+      },
+      "id": "dbb50340-3bf4-4754-8450-a36cbceb4654",
+      "name": "07 - Handle Completion Button",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -368,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Social Media Content Tracker"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Completed At": "={{ $now.setZone('Asia/Kolkata').toFormat('dd/MM/yyyy HH:mm:ss') }}",
+            "ID": "={{ $json.callback_query.data.split(':')[1] }}",
+            "Status": "Completed"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pending Work",
+              "displayName": "Pending Work",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Scheduled Time",
+              "displayName": "Scheduled Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reminder Count",
+              "displayName": "Reminder Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Completed At",
+              "displayName": "Completed At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -144,
+        384
+      ],
+      "id": "308dfe11-46e7-4c17-befe-3c7566000c73",
+      "name": "08 - Mark Task as Completed"
+    },
+    {
+      "parameters": {
+        "resource": "callback",
+        "queryId": "={{ $('07 - Handle Completion Button').item.json.callback_query.id }}",
+        "additionalFields": {
+          "text": "Task completed successfully! ✅"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        80,
+        384
+      ],
+      "id": "dc276b75-32f3-44ec-86c0-2b26eeb1ca90",
+      "name": "09 - Confirm Task Completion"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 - Reminder Scheduler": {
+      "main": [
+        [
+          {
+            "node": "02 - Fetch Pending Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 - Fetch Pending Tasks": {
+      "main": [
+        [
+          {
+            "node": "03 - Check Reminder Conditions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Check Reminder Conditions": {
+      "main": [
+        [
+          {
+            "node": "04 - Check Reminder Eligibility",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - Check Reminder Eligibility": {
+      "main": [
+        [
+          {
+            "node": "05 - Send Telegram Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - Send Telegram Reminder": {
+      "main": [
+        [
+          {
+            "node": "06 - Update Reminder Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Handle Completion Button": {
+      "main": [
+        [
+          {
+            "node": "08 - Mark Task as Completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Mark Task as Completed": {
+      "main": [
+        [
+          {
+            "node": "09 - Confirm Task Completion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {},
+  "nodeGroups": [],
+  "tags": [],
+  "staticData": null
+}
