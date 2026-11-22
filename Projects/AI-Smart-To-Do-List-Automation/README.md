@@ -50,20 +50,16 @@ The current workflow does not include a Telegram user ID or chat ID column.
 ## Screenshots
 
 ### 1. n8n Workflow Architecture
-
-![n8n Workflow Overview](screenshots/workflow-overview.png)
+![n8n Workflow Overview](screenshots/workflow-overview.jpeg)
 
 ### 2. Adding and Viewing Tasks in Telegram
-
-![Telegram Task Creation and List](screenshots/telegram-task-management.png)
+![Telegram Task Creation and List](screenshots/telegram-task-management.jpeg)
 
 ### 3. Completing and Deleting Tasks
-
-![Telegram Task Completion and Deletion](screenshots/telegram-task-completion-deletion.png)
+![Telegram Task Completion and Deletion](screenshots/telegram-task-completion-deletion.jpeg)
 
 ### 4. Google Sheets Task Database
-
-![Google Sheets Task Database](screenshots/google-sheets-task-database.png)
+![Google Sheets Task Database](screenshots/google-sheets-task-database.jpeg)
 
 ## Setup
 
