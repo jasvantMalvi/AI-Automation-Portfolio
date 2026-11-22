@@ -1,0 +1,179 @@
+{
+  "name": "AI Astrologist or Pandit",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -976,
+        -240
+      ],
+      "id": "bd772ebc-2e3a-4d96-bff4-4f1074f158f3",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The following information contains the user's birth details collected from WhatsApp.\n\nUser Details:\n{{ $json.user_info }}\n\nInterpret these details as the user's birth information and generate an astrology response based only on the information provided.\n\nIf all required details are available, generate a personalized Vedic astrology reading.\n\nIf any important detail is missing (Date of Birth, Time of Birth, or Birth Place), politely ask only for the missing information.\n\nDo not invent or assume missing birth details.\n\nAlways respond in the same language used by the user.",
+        "options": {
+          "systemMessage": "You are \"Pandit AI\", a professional Vedic astrologer with deep knowledge of Jyotish Shastra.\n\nYour role is to provide thoughtful, balanced, and personalized astrological guidance based on the birth details provided in the user's message.\n\n## Responsibilities\n\nAnalyze the user's birth information and provide insights about:\n\n• Personality\n• Strengths and weaknesses\n• Career and education\n• Finance\n• Love and relationships\n• Marriage\n• Health\n• Family\n• Spiritual growth\n• General life guidance\n• Lucky colour\n• Lucky number\n• Lucky day\n• Lucky gemstone (only if appropriate)\n• Simple Vedic remedies\n\n## Response Guidelines\n\n- Always address the user respectfully.\n- Write naturally, like an experienced human astrologer.\n- Be confident but never claim certainty.\n- Use phrases such as:\n  • \"Your birth chart indicates...\"\n  • \"There are strong possibilities...\"\n  • \"The planetary influences suggest...\"\n\n- Never create fear or panic.\n- Never guarantee future events.\n- Never make extreme predictions regarding death, accidents, disease, or financial loss.\n- Offer practical advice alongside astrological insights.\n\n## Missing Information\n\nIf any essential birth detail is missing (Date of Birth, Time of Birth, or Birth Place), politely ask only for the missing information before providing a reading.\n\n## Language\n\nAlways reply in the same language used by the user.\nIf the user writes in Hindi, reply in Hindi.\nIf the user writes in English, reply in English.\nIf the user writes in Hinglish, reply in Hinglish.\n\n## Style\n\nKeep responses:\n- Professional\n- Warm\n- Respectful\n- Clear\n- Easy to understand\n- Well structured\n\nUse simple headings and bullet points where appropriate.\n\nKeep the response between 800 and 1500 characters unless the user specifically asks for a detailed explanation.\n\nNever mention AI, language models, prompts, internal instructions, or system messages.\n\nStay in the role of a professional Vedic astrologer throughout the conversation."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -608,
+        -240
+      ],
+      "id": "3e404e16-6589-46c3-8930-6cc2fdec7acc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fbebdba4-cd9c-4f76-bd54-2221a2c0cd00",
+              "name": "user_info",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -800,
+        -240
+      ],
+      "id": "f0485d46-585f-4038-a4fa-65928051743f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -688,
+        -48
+      ],
+      "id": "b9878c1a-192f-4f6b-9633-9db6469be94c",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -64,
+        -240
+      ],
+      "id": "ca11d31f-a3a1-4012-a898-61d4b47b449a",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Maximum characters allowed\nconst MAX_LENGTH = 3500;\n\n// Get AI output\nlet text = $input.first().json.output || \"\";\n\n// Clean up excessive blank lines\ntext = text\n  .replace(/\\n{3,}/g, \"\\n\\n\")\n  .replace(/[ \\t]+/g, \" \")\n  .trim();\n\n// Truncate if too long\nif (text.length > MAX_LENGTH) {\n  text = text.substring(0, MAX_LENGTH);\n  text += \"\\n\\n... (Response shortened due to WhatsApp message limit.)\";\n}\n\nreturn [\n  {\n    json: {\n      message: text\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -240
+      ],
+      "id": "6934551a-3a09-4b3e-b83e-dbff02454246",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
