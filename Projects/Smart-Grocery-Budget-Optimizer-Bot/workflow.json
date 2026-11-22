@@ -1,0 +1,219 @@
+{
+  "name": "Smart Grocery Budget Optimizer Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -144,
+        -16
+      ],
+      "id": "915a96f5-b46c-4c83-9728-c6cb6d8c961e",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the message/grocery list sent by the user on Telegram:\n{{ $('Code in JavaScript').item.json.text }}\n\nPlease analyze this list according to your system guidelines and provide the optimized grocery budget breakdown and suggestions.",
+        "options": {
+          "systemMessage": "You are an expert Smart Grocery Budget Optimizer Bot. Your primary goal is to help users manage their grocery shopping efficiently, analyze prices, optimize budgets, and suggest money-saving alternatives. \n\nGuidelines:\n- Estimate realistic market prices for the items provided by the user.\n- Calculate the total estimated cost clearly.\n- If a budget is mentioned, compare it and state if it is within or over budget.\n- Suggest cheaper alternatives, substitutes, or smart ways to save money.\n- Keep responses clean, well-formatted with bullet points, and optimized for mobile reading on Telegram.\n- Match the user's language style (English or Gujarati script as used by the user)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        288,
+        -16
+      ],
+      "id": "af3571d7-c678-494a-bee9-68dd426bd95d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract incoming Telegram message details safely\nconst message = $input.item.json.message;\n\nconst text = message && message.text ? message.text : \"\";\nconst chatId = message && message.chat ? message.chat.id : \"\";\nconst userName = message && message.from ? (message.from.first_name || \"User\") : \"User\";\n\n// Return the cleaned data to the next node\nreturn {\n  json: {\n    text: text,\n    chatId: chatId,\n    userName: userName\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        -16
+      ],
+      "id": "d87ad3ff-9994-49cd-bcea-f741aaafba25",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        816,
+        -16
+      ],
+      "id": "43e9a1da-bc07-480d-9b3a-0b213d24619d",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Smart Grocery Budget Optimizer Bot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/REPLACE_WITH_YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatId": "={{ $('Code in JavaScript').item.json.chatId }}",
+            "text": "={{ $('Code in JavaScript').item.json.text }}",
+            "userName": "={{ $('Code in JavaScript').item.json.userName }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "chatId",
+              "displayName": "chatId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "userName",
+              "displayName": "userName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "text",
+              "displayName": "text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        -16
+      ],
+      "id": "891d98cc-316e-42ca-9d44-ae7fddb4c166",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        192
+      ],
+      "id": "1105eaaf-7266-4a42-9a7c-c13280403a4c",
+      "name": "OpenAI Chat Model"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {},
+  "nodeGroups": [],
+  "tags": []
+}
