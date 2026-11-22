@@ -68,5 +68,5 @@ AI-Document-Summarizer-Agent/
 
 ## Workflow Screenshot
 
-![AI Document Summarizer Agent Workflow](./screenshots/workflow-overview.png)
+![AI Document Summarizer Agent Workflow](./screensots/workflow-overview.png)
 
