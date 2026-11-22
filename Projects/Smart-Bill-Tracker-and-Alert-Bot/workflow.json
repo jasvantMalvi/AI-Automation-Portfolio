@@ -1,0 +1,525 @@
+{
+  "name": "Smart Bill Tracker & Alert Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        528
+      ],
+      "id": "8862aeb4-70f1-41e1-8f30-a18d0585b774",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "921ed4ce-d2c8-4abf-ac38-a9e22f47c9fc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "Automatically starts the bill reminder workflow every day at 9:00 PM IST.",
+        "height": 272,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -112
+      ],
+      "id": "c77ab886-569e-4870-983f-2949cdad62ed",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Fetches all registered bills, payment statuses, due dates and reminder history from Google Sheets.",
+        "height": 272,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -112
+      ],
+      "id": "135d0384-fd35-44e2-a42f-f5dc662792d2",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Bill Tracker Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b98d4db5-7622-42e1-a825-15e8d817f872",
+      "name": "Get Bills from Google Sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nconst todayStr = new Intl.DateTimeFormat(\"en-CA\", {\n  timeZone: \"Asia/Kolkata\",\n  year: \"numeric\",\n  month: \"2-digit\",\n  day: \"2-digit\"\n}).format(new Date());\n\nfunction getDateKey(value) {\n  if (!value) return \"\";\n\n  const str = String(value).trim();\n\n  // YYYY-MM-DD\n  const iso = str.match(/^(\\d{4})-(\\d{2})-(\\d{2})/);\n  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;\n\n  // DD/MM/YYYY\n  const indian = str.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);\n  if (indian) return `${indian[3]}-${indian[2]}-${indian[1]}`;\n\n  return \"\";\n}\n\nfunction dayNumber(date) {\n  const [y, m, d] = date.split(\"-\").map(Number);\n  return Date.UTC(y, m - 1, d) / 86400000;\n}\n\nconst todayNumber = dayNumber(todayStr);\nconst alerts = [];\n\nfor (const item of items) {\n  const bill = item.json;\n\n  // Only unpaid bills\n  if (\n    String(bill.PaymentStatus || \"\").trim().toLowerCase()\n    !== \"unpaid\"\n  ) continue;\n\n  if (!bill.BillID || !bill.ChatID || !bill.DueDate) continue;\n\n  const dueDate = getDateKey(bill.DueDate);\n  if (!dueDate) continue;\n\n  const daysRemaining = dayNumber(dueDate) - todayNumber;\n\n  const reminderDays = String(bill.ReminderDays || \"7,3,1,0\")\n    .split(\",\")\n    .map(x => Number(x.trim()));\n\n  let reminderType = \"\";\n  let timingMessage = \"\";\n\n  if (daysRemaining < 0) {\n    reminderType = \"overdue\";\n    timingMessage = \"🚨 OVERDUE BILL!\";\n  } else if (reminderDays.includes(daysRemaining)) {\n    reminderType = `due_in_${daysRemaining}_days`;\n\n    timingMessage = daysRemaining === 0\n      ? \"🚨 BILL DUE TODAY!\"\n      : `⚠️ BILL DUE IN ${daysRemaining} DAYS!`;\n  } else {\n    continue;\n  }\n\n  // Check previous reminder history\n  const previousDate = getDateKey(bill.LastReminderDate);\n  const previousType = String(bill.LastReminderType || \"\").trim();\n\n  // Skip if same reminder was already sent today\n  if (\n    previousDate === todayStr &&\n    previousType === reminderType\n  ) continue;\n\n  const message = `${timingMessage}\n\n🔹 Bill: ${bill.BillName}\n💰 Amount: ₹${bill.Amount}\n📅 Due Date: ${dueDate}\n📂 Category: ${bill.Category}\n\nPlease complete your payment on time.\n\n🆔 Bill ID: ${bill.BillID}`;\n\n  alerts.push({\n    json: {\n      ...bill,\n\n      // Telegram fields\n      chatId: String(bill.ChatID),\n      message,\n\n      // Reminder calculation\n      DaysRemaining: daysRemaining,\n      ReminderType: reminderType,\n\n      // IMPORTANT: fields for Google Sheets Update Row\n      LastReminderDate: todayStr,\n      LastReminderType: reminderType\n    }\n  });\n}\n\nreturn alerts;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "8a6c91fe-6d79-4eef-9eb4-cdde0abc0dc9",
+      "name": "Calculate Due Dates & Generate Alerts"
+    },
+    {
+      "parameters": {
+        "content": "Calculates remaining days, identifies due or overdue bills and generates notification data with updated reminder history.",
+        "height": 272,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -112
+      ],
+      "id": "b1b4cbe9-692a-428e-bf3f-ec7d493afd8e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "aff00de9-0f37-463f-98af-47074279f01d",
+              "leftValue": "={{ $json.PaymentStatus.toLowerCase() }}",
+              "rightValue": "unpaid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        672,
+        0
+      ],
+      "id": "f8d0c115-8ab3-423e-98a8-0d7b6490a535",
+      "name": "Check Payment Status"
+    },
+    {
+      "parameters": {
+        "content": "Filters out already-paid bills and allows only unpaid bills to continue.",
+        "height": 272,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -112
+      ],
+      "id": "c3e4ff89-0e3b-4a1c-9b6b-28500d275e37",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "8c0bc50e-5478-4a36-8355-7ea6c700c0d8",
+              "leftValue": "=\t={{ !($json.LastReminderDate && String($json.LastReminderDate).slice(0,10) === $json.lastReminderDate && $json.LastReminderType === $json.reminderType) }}",
+              "rightValue": "=\t=true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "7c136208-9b2b-4650-b7f6-8ab3055af889",
+      "name": "Check Duplicate Reminder"
+    },
+    {
+      "parameters": {
+        "content": "Checks previous reminder history to prevent duplicate notifications on the same day.",
+        "height": 256,
+        "width": 224,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -176
+      ],
+      "id": "0d42cbb8-441b-4a4a-a3ce-350a69ab618f",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        -224
+      ],
+      "id": "6a4273f0-7584-4783-b72b-08ff3cd2ff33",
+      "name": "Send Telegram Bill Reminder"
+    },
+    {
+      "parameters": {
+        "content": "Sends personalized Telegram notifications containing bill name, amount, category and due date.",
+        "height": 272,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        -320
+      ],
+      "id": "86883d33-11b3-455e-9b6e-7d8868c8d563",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Updates LastReminderDate and LastReminderType after successful Telegram notification delivery.",
+        "height": 272,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -320
+      ],
+      "id": "e88c7e5a-53a8-44c8-af6d-ae48323d465d",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Bill Tracker Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "BillID": "={{ $('Calculate Due Dates & Generate Alerts').item.json.BillID }}",
+            "LastReminderDate": "={{ $('Calculate Due Dates & Generate Alerts').item.json.LastReminderDate }}",
+            "LastReminderType": "={{ $('Calculate Due Dates & Generate Alerts').item.json.LastReminderType }}"
+          },
+          "matchingColumns": [
+            "BillID"
+          ],
+          "schema": [
+            {
+              "id": "BillID",
+              "displayName": "BillID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "UserName",
+              "displayName": "UserName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ChatID",
+              "displayName": "ChatID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "BillName",
+              "displayName": "BillName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "DueDate",
+              "displayName": "DueDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "PaymentStatus",
+              "displayName": "PaymentStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ReminderDays",
+              "displayName": "ReminderDays",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "LastReminderDate",
+              "displayName": "LastReminderDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LastReminderType",
+              "displayName": "LastReminderType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "PaymentDate",
+              "displayName": "PaymentDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        -224
+      ],
+      "id": "e42e754d-a28f-48e0-9d5c-2f31b153e170",
+      "name": "Update Reminder History in Google Sheets"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Bills from Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Bills from Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Calculate Due Dates & Generate Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Due Dates & Generate Alerts": {
+      "main": [
+        [
+          {
+            "node": "Check Payment Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Payment Status": {
+      "main": [
+        [
+          {
+            "node": "Check Duplicate Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Duplicate Reminder": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Bill Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Bill Reminder": {
+      "main": [
+        [
+          {
+            "node": "Update Reminder History in Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
