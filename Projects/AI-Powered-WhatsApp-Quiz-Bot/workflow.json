@@ -1,0 +1,972 @@
+{
+  "name": "AI Powered Whatsapp Quiz Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -272
+      ],
+      "id": "a3d4d3cb-011b-4af2-bcf3-269b35388003",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "069f2167-8aa2-4931-a8ff-f4dd7d536516",
+              "name": "userMessage",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            },
+            {
+              "id": "75e105d2-88ae-415d-8fe4-9e4ad3912fe9",
+              "name": "cleanMessage",
+              "value": "={{  $json.messages[0].text.body .toLowerCase().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "4d49bcfb-eee7-492f-b92e-d7755e37dc17",
+              "name": "Answer",
+              "value": "={{ $json.messages[0] .text.body.toUpperCase().trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -480,
+        -272
+      ],
+      "id": "b8e51bfc-dc45-476e-9e2d-1a8d203f22af",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2ed823cd-ff05-47a8-aafe-c3e015e43bb6",
+              "leftValue": "={{ $json.cleanMessage }}",
+              "rightValue": "hello",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "b7b04ed9-f660-47e8-9a09-2abf831fa457",
+              "leftValue": "={{ $json.cleanMessage }}",
+              "rightValue": "hi",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "f8d5b8a1-2df2-45bf-9122-dfb807236f45",
+              "leftValue": "={{ $json.cleanMessage }}",
+              "rightValue": "hey",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -304,
+        -272
+      ],
+      "id": "d69ba849-137e-492b-b814-de85342169da",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "👋 Welcome! To begin the quiz, type START.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        -368
+      ],
+      "id": "cdb3be69-e487-45f4-ab03-53efbc71425b",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b72fcc8e-0928-4e39-882d-befc24ef5dec",
+              "leftValue": "={{ $json.cleanMessage }}",
+              "rightValue": "start",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -128,
+        -144
+      ],
+      "id": "53b10671-1625-4aaa-830a-6cf3658106d3",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Quiz_Questions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Question_ID",
+              "lookupValue": "Q001"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        112,
+        -240
+      ],
+      "id": "86283b47-2f4c-43aa-9d94-3346c5338c85",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json;\n\nconst message = `🎯 *QUIZ TIME!* 🎯\n\n📖 *Question ${q.Question_ID.replace(\"Q\", \"\")}*\n\n${q.Question}\n\nA. ${q.Option_A}\nB. ${q.Option_B}\nC. ${q.Option_C}\nD. ${q.Option_D}\n\n━━━━━━━━━━━━━━━━━━\n\n✍️ *Reply with only:*\n*A*, *B*, *C* or *D* `;\n\n\nreturn [\n  {\n    json: {\n      questionMessage: message,\n      questionId: q.Question_ID,\n      correctAnswer: q.Correct_Answer\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -240
+      ],
+      "id": "5846226c-948d-48ba-9ed0-0d1ac8369510",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.questionMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        -240
+      ],
+      "id": "9ee99014-dd08-4525-8bcc-ba8fb15370ae",
+      "name": "Send message1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1934868119,
+          "mode": "list",
+          "cachedResultName": "Quiz_Stage",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=1934868119"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone_No": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+            "Current_Question_ID": "={{ $('Code in JavaScript').item.json.questionId }}",
+            "Last_Question_Time": "={{ DateTime.now().setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Phone_No",
+              "displayName": "Phone_No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Current_Question_ID",
+              "displayName": "Current_Question_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last_Question_Time",
+              "displayName": "Last_Question_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        752,
+        -240
+      ],
+      "id": "3f69b718-cd30-4d3b-b129-d424b3996d04",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1934868119,
+          "mode": "list",
+          "cachedResultName": "Quiz_Stage",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=1934868119"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Phone_No",
+              "lookupValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        -32
+      ],
+      "id": "42075ec4-4d09-46ba-85c2-9d899d02bb19",
+      "name": "Get row(s) in sheet1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Quiz_Questions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Question_ID",
+              "lookupValue": "={{ $json.Current_Question_ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        320,
+        -32
+      ],
+      "id": "21af7d90-db59-49fc-ba2a-45beda160833",
+      "name": "Get row(s) in sheet2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get question data from Google Sheet\nconst question = $input.first().json;\n\n// Get student's answer from the Edit Fields node\nconst studentAnswer = $('Edit Fields').first().json.Answer;\n\n// Get correct answer from Google Sheet\nconst correctAnswer = question.Correct_Answer\n  .toString()\n  .trim()\n  .toUpperCase();\n\n// Validate\nconst isCorrect = studentAnswer === correctAnswer;\nconst score = isCorrect ? 1 : 0;\n\n// Return result\nreturn [\n  {\n    json: {\n      questionId: question.Question_ID,\n      studentAnswer,\n      correctAnswer,\n      is_correct: isCorrect,\n      score\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -32
+      ],
+      "id": "4f56b785-8e8f-4667-ae3a-fe9214c6074c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1580710405,
+          "mode": "list",
+          "cachedResultName": "Quiz_Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=1580710405"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone_No": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+            "Question_ID": "={{ $json.questionId }}",
+            "Student_Answer": "={{ $json.studentAnswer }}",
+            "Correct_Answer": "={{ $json.correctAnswer }}",
+            "Is_Correct": "={{ $json.is_correct }}",
+            "Score": "={{ $json.score }}",
+            "Response_Time": "={{ DateTime.now().setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Phone_No",
+              "displayName": "Phone_No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Question_ID",
+              "displayName": "Question_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Student_Answer",
+              "displayName": "Student_Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Correct_Answer",
+              "displayName": "Correct_Answer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Is_Correct",
+              "displayName": "Is_Correct",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Response_Time",
+              "displayName": "Response_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        768,
+        -32
+      ],
+      "id": "f42654c9-efc6-41c7-af62-ce46dff7305f",
+      "name": "Append row in sheet1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1934868119,
+          "mode": "list",
+          "cachedResultName": "Quiz_Stage",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=1934868119"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone_No": "={{ $json.Phone_No }}",
+            "Current_Question_ID": "={{\n'Q' + String(parseInt($json.Question_ID.replace('Q', ''), 10) + 1).padStart(3, '0')\n}}",
+            "Last_Question_Time": "={{ DateTime.now().setZone('Asia/Kolkata').toFormat('dd/MM/yyyy hh:mm:ss a') }}"
+          },
+          "matchingColumns": [
+            "Phone_No"
+          ],
+          "schema": [
+            {
+              "id": "Phone_No",
+              "displayName": "Phone_No",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Current_Question_ID",
+              "displayName": "Current_Question_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last_Question_Time",
+              "displayName": "Last_Question_Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        992,
+        -32
+      ],
+      "id": "fc12b55b-63f0-4359-91b7-b032f82148cd",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1216,
+        -32
+      ],
+      "id": "589f3e7c-a027-4522-a663-57c6e2afb279",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9f6849bb-aefe-497d-9a25-3fd6de2ef4cb",
+              "leftValue": "={{ parseInt($json.Current_Question_ID.replace('Q', ''), 10) <= 10 ? true : false }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1440,
+        -32
+      ],
+      "id": "d23184e6-198f-4a72-ac69-241b011db1ad",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Quiz_Questions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Question_ID",
+              "lookupValue": "={{ $json.Current_Question_ID }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1680,
+        -144
+      ],
+      "id": "ecf64e0c-f7f3-4649-a0b7-b77b85dd0536",
+      "name": "Get row(s) in sheet3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const q = $input.first().json;\n\nconst questionNo = parseInt(q.Question_ID.replace(\"Q\", \"\"), 10);\n\nconst message = `🎯 *QUIZ TIME!* 🎯\n\n⏭️ *Next Question*\n\n📖 *Question ${String(questionNo).padStart(3, \"0\")}*\n\n${q.Question}\n\nA. ${q.Option_A}\nB. ${q.Option_B}\nC. ${q.Option_C}\nD. ${q.Option_D}\n\n────────────────────\n\n✍️ *Reply with only:*\n*A, B, C or D*`;\n\nreturn [\n  {\n    json: {\n      questionMessage: message,\n      questionId: q.Question_ID,\n      correctAnswer: q.Correct_Answer\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1904,
+        -144
+      ],
+      "id": "3d30a2cc-a9b8-4732-858c-f203b3b7509b",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.questionMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2128,
+        -144
+      ],
+      "id": "3e11fc1a-ca8f-4d6c-ae21-09a0112660d4",
+      "name": "Send message2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_GOOGLE_SHEET_NAME",
+          "cachedResultUrl": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1580710405,
+          "mode": "list",
+          "cachedResultName": "Quiz_Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11ekCLFpOuh_-az08oJG6syonD5la_UU5mOA9houoQFo/edit#gid=1580710405"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Phone_No",
+              "lookupValue": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1664,
+        128
+      ],
+      "id": "e762a31d-0db1-4d7c-894f-f19d86a57f62",
+      "name": "Get row(s) in sheet4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all().map(item => item.json);\n\nconst totalQuestions = responses.length;\n\nconst score = responses.filter(r =>\n    String(r.Is_Correct).toLowerCase() === \"true\"\n).length;\n\nconst wrong = totalQuestions - score;\n\nconst percentage = ((score / totalQuestions) * 100).toFixed(0);\n\nconst phoneNo = responses[0].Phone_No;\n\nlet answerSummary = \"\";\n\nresponses.forEach((r, index) => {\n    const status = String(r.Is_Correct).toLowerCase() === \"true\" ? \"✅\" : \"❌\";\n\n    answerSummary += `${status} Q${index + 1}: Your Answer ${r.Student_Answer} | Correct ${r.Correct_Answer}\\n`;\n});\n\nconst message = `🏆 *QUIZ COMPLETED!* 🏆\n\n━━━━━━━━━━━━━━━━━━\n\n📊 *Your Result*\n\n✅ Correct Answers : *${score}/${totalQuestions}*\n❌ Wrong Answers : *${wrong}*\n📈 Score : *${percentage}%*\n\n━━━━━━━━━━━━━━━━━━\n\n📋 *Answer Summary*\n\n${answerSummary}\n\n🎉 Thank you for participating!\nKeep learning and keep growing! 🚀`;\n\nreturn [{\n    json: {\n        phoneNo,\n        totalQuestions,\n        score,\n        wrong,\n        percentage,\n        resultMessage: message\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        128
+      ],
+      "id": "fd4ee223-9647-45b2-b9d5-9163fe716ca1",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.resultMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2112,
+        128
+      ],
+      "id": "2c7c265f-4c2a-4028-886a-856e70113cb6",
+      "name": "Send message3"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Send message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Send message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
