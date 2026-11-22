@@ -35,7 +35,7 @@ Detailed project documentation will be added progressively.
 14. [Smart Grocery Budget Optimizer Bot](./Smart-Grocery-Budget-Optimizer-Bot/) — An AI-powered Telegram grocery assistant that estimates shopping costs, compares expenses with a specified budget, suggests cheaper alternatives, and logs user requests in Google Sheets using n8n and OpenAI.
 15. [Smart Business Analyst Bot](./Smart-Business-Analyst-Bot/) — Automates weekly sales analysis using n8n, Google Sheets, and OpenAI. Calculates business KPIs, identifies sales trends, generates forecasts, assesses business risks, and delivers management reports through Gmail with a Looker Studio dashboard.
 16. [Smart Bill Tracker & Alert Bot](./Smart-Bill-Tracker-and-Alert-Bot/) — Automates bill payment reminders using n8n, Telegram, and Google Sheets. Tracks due dates, identifies upcoming and overdue bills, filters paid bills, prevents duplicate reminders, and maintains reminder history.
-
+17. [Sleep Schedule Reminder Agent](./Sleep-Schedule-Reminder-Agent/) — Automates personalized bedtime and morning reminders using n8n, Telegram, Google Sheets, and OpenAI. Monitors sleep schedules, checks reminder times, generates practical sleep routine suggestions, and tracks sent reminders to prevent duplicates.
 
     
 ## Technologies Used
