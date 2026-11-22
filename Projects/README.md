@@ -38,7 +38,7 @@ Detailed project documentation will be added progressively.
 17. [Sleep Schedule Reminder Agent](./Sleep-Schedule-Reminder-Agent/) — Automates personalized bedtime and morning reminders using n8n, Telegram, Google Sheets, and OpenAI. Monitors sleep schedules, checks reminder times, generates practical sleep routine suggestions, and tracks sent reminders to prevent duplicates.
 18. [AI Email Classifier by Priority Bot](./AI-Email-Classifier-by-Priority-Bot/) — Automatically monitors Gmail, classifies incoming emails by category and priority (High, Medium, Low), generates AI-powered summaries, and sends priority-based WhatsApp notifications using n8n, OpenAI, and the WhatsApp Business API.
 19. [Smart File Organizer Bot](./Smart-File-Organizer-Bot/) — Automatically organizes newly uploaded Google Drive files using n8n and OpenAI. Classifies files by type and moves them into designated folders for images, videos, documents, and other files.
-
+20. [AI Attendance Tracking Bot](./AI-Attendance-Tracking-Bot/) — Automates student attendance recording through WhatsApp using n8n and Google Sheets. Extracts sender details, records attendance with date and time, prevents duplicate daily entries, and sends automated confirmation messages.
     
 ## Technologies Used
 
