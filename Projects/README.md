@@ -30,6 +30,7 @@ Detailed project documentation will be added progressively.
 9. [AI Powered Personal Assistant in Telegram](./AI-Powered-Personal-Assistant-in-Telegram/) — A conversational assistant supporting text and voice interactions, Gmail, Notion tasks, Google Calendar, and Google Contacts.
 10. [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) — Automates maintenance request handling and dispatch workflows.
 11. [AI-Powered WhatsApp Quiz Bot](./AI-Powered-WhatsApp-Quiz-Bot/README.md) — Sends sequential multiple-choice quiz questions over WhatsApp, checks answers, tracks participant progress, and reports scores using n8n and Google Sheets.
+12. [AI Smart To-Do List Automation](./AI-Smart-To-Do-List-Automation/) — Telegram-based AI task manager that adds, views, completes, and deletes tasks using an OpenAI-powered n8n AI Agent and Google Sheets.
 
 ## Technologies Used
 
