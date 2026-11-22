@@ -64,7 +64,7 @@ AI-Document-Summarizer-Agent/
 ## Project Files
 
 - [Download n8n Workflow JSON](./workflow.json) — Sanitized workflow export for importing into n8n.
-- [View Project Screenshots](./screenshots/) — Workflow overview and visual documentation.
+- [View Project Screenshots](./screensots/) — Workflow overview and visual documentation.
 
 ## Workflow Screenshot
 
