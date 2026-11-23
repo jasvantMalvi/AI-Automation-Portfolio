@@ -61,6 +61,8 @@ Detailed project documentation will be added progressively.
 
 32. [Lead Follow-up Automation Bot](./Lead-Followup-Automation-Bot/) — Captures inbound WhatsApp enquiries, identifies new and existing leads by phone number, detects interest across six course options, tracks lead interactions in Google Sheets, and sends welcome or course-interest responses. The supplied workflow records a next follow-up date but does not yet send scheduled follow-up messages or handle the requested Yes/No confirmation state.
 
+33. [Daily News Digest Agent](./Daily-News-Digest-Agent/) — Collects news from five Google News RSS topic feeds, removes duplicate headlines, ranks up to 20 articles using JavaScript keyword scoring, and analyzes summaries, categories, sentiment, and trends with GPT-5 Mini. Saves article records to Google Sheets and generates a daily digest in Google Docs. The workflow's multi-item document branch may create multiple digest documents in one run and should be checked for single-document aggregation.
+
 ## Technologies Used
 
 - n8n
