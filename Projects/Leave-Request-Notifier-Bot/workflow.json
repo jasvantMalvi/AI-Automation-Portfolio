@@ -1,0 +1,460 @@
+{
+  "name": "Leave request notifier Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Leave request notifier Bot"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1285079173,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -96
+      ],
+      "id": "99815284-beca-4580-9909-6722e25d263a",
+      "name": "01 – New Leave Request Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "52166c51-c220-499a-98e6-8aa6863f373b",
+              "name": "name",
+              "value": "={{ $json['Employee Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "1d15bfbd-10ce-41f9-8807-249e97704273",
+              "name": "email",
+              "value": "={{ $json['Employee Email  '] }}",
+              "type": "string"
+            },
+            {
+              "id": "88d1b262-9574-45f1-9706-457530f23d3d",
+              "name": "department",
+              "value": "={{ $json['Department  '] }}",
+              "type": "string"
+            },
+            {
+              "id": "3c1ccb21-2632-4b6e-a8c1-935553b186b1",
+              "name": "leave_type",
+              "value": "={{ $json['Leave Type  '] }}",
+              "type": "string"
+            },
+            {
+              "id": "5889ca4b-4671-494e-9f52-1eb5646297b6",
+              "name": "start_date",
+              "value": "={{ $json['Start Date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "dd777895-ed4a-47b3-a6ff-7f272842993e",
+              "name": "end_date",
+              "value": "={{ $json['End Date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "eeaebb0d-efed-455a-a230-d0ed4600d736",
+              "name": "reason_for_leave",
+              "value": "={{ $json['Reason for leave'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -272,
+        -96
+      ],
+      "id": "ee467a7a-28d7-4825-a933-5898ae809d8c",
+      "name": "\t02 – Extract Employee Details"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following employee leave request and generate a professional summary.\n\nEmployee Name: {{ $json.name }}\nEmployee Email: {{ $json.email }}\nDepartment: {{ $json.department }}\nLeave Type: {{ $json.leave_type }}\nStart Date: {{ $json.start_date }}\nEnd Date: {{ $json.end_date }}\nReason for Leave: {{ $json.reason_for_leave }}\n\nCalculate the leave duration based on the start and end dates, including both dates.\n\nProvide:\n1. Employee details\n2. Leave type\n3. Leave duration\n4. Leave reason summary\n5. Important observations\n6. Leave status as Pending\n\nDo not approve or reject the request.\nReturn only valid JSON.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an Employee Leave Request Assistant.\n\nYour task is to analyze employee leave requests\nand generate a short professional summary.\n\nInstructions:\n1. Identify the employee name.\n2. Identify leave type and duration.\n3. Summarize the reason for leave.\n4. Highlight important information.\n5. Keep the response professional and neutral.\n6. Do not approve or reject leave requests.\n7. Never make decisions on behalf of the manager.\n\nReturn a structured JSON response."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "e50e70d7-8973-4bda-bf24-341844be4b17",
+      "name": "03 – AI Leave Request Analyzer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -48,
+        112
+      ],
+      "id": "ec98e669-954f-414d-a4d0-e90e22fbc0a0",
+      "name": "\tOpenAI – Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"employee\": \"Rahul Patel\",\n  \"leave_type\": \"Sick Leave\",\n  \"duration\": \"2 Days\",\n  \"summary\": \"Employee requested two days of sick leave due to fever.\",\n  \"status\": \"Pending\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        176,
+        112
+      ],
+      "id": "5d729562-e1bc-4e75-a402-136558675163",
+      "name": "\tAI – Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Leave request notifier Bot"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1285079173,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "AI Summary": "={{ $json.output.summary }}",
+            "Leave Status": "={{ $json.output.status }}",
+            "Employee Email  ": "={{ $json.output.employee.match(/\\((.*?)\\)/)[1].split(',')[0] }}"
+          },
+          "matchingColumns": [
+            "Employee Email  "
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Employee Name",
+              "displayName": "Employee Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Employee Email  ",
+              "displayName": "Employee Email  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Department  ",
+              "displayName": "Department  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Leave Type  ",
+              "displayName": "Leave Type  ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Start Date",
+              "displayName": "Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "End Date",
+              "displayName": "End Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Reason for leave",
+              "displayName": "Reason for leave",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Leave Status",
+              "displayName": "Leave Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Manager Remarks",
+              "displayName": "Manager Remarks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        368,
+        -96
+      ],
+      "id": "392a3ead-c476-41b8-8b62-91e124e6d494",
+      "name": "04 – Update Leave Record"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('\t02 – Extract Employee Details').item.json.email }}",
+        "subject": "=New Leave Request – {{ $('\t02 – Extract Employee Details').item.json.name }}",
+        "message": "=```html <!DOCTYPE html> <html> <head>   <meta charset=\"UTF-8\"> </head> <body style=\"margin:0; padding:0; background-color:#f4f6f9; font-family:Arial, sans-serif;\">    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:30px 10px;\">     <tr>       <td align=\"center\">          <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\"           style=\"max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden;\">            <!-- Header -->           <tr>             <td style=\"background:#1e3a5f; padding:25px; color:#ffffff;\">               <h2 style=\"margin:0; font-size:22px;\">Leave Request Notification</h2>               <p style=\"margin:8px 0 0; font-size:13px; color:#dbeafe;\">                 Employee Leave Management System               </p>             </td>           </tr>            <!-- Main Content -->           <tr>             <td style=\"padding:25px; color:#333333;\">                <p style=\"font-size:15px;\">Dear Manager,</p>                <p style=\"font-size:14px; line-height:1.6;\">                 A new employee leave request has been submitted.                 Please review the details below and take the necessary action.               </p>                <h3 style=\"color:#1e3a5f; font-size:17px;\">                 Employee Details               </h3>                <table width=\"100%\" cellpadding=\"10\"                 style=\"border-collapse:collapse; font-size:14px;\">                  <tr style=\"background:#f4f6f9;\">                   <td><b>Employee Name</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.name }}</td>                 </tr>                  <tr>                   <td><b>Email Address</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.email }}</td>                 </tr>                  <tr style=\"background:#f4f6f9;\">                   <td><b>Department</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.department }}</td>                 </tr>                  <tr>                   <td><b>Leave Type</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.leave_type }}</td>                 </tr>                  <tr style=\"background:#f4f6f9;\">                   <td><b>Start Date</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.start_date }}</td>                 </tr>                  <tr>                   <td><b>End Date</b></td>                   <td>{{ $('\t02 – Extract Employee Details').item.json.end_date }}</td>                 </tr>                  <tr style=\"background:#f4f6f9;\">                   <td><b>Leave Duration</b></td>                   <td>{{ $('03 – AI Leave Request Analyzer').item.json.output.duration }}</td>                 </tr>                </table>                <!-- Leave Reason -->               <h3 style=\"color:#1e3a5f; font-size:17px; margin-top:25px;\">                 Leave Request Summary               </h3>                <div style=\"background:#f4f6f9; padding:15px; border-radius:6px;                 font-size:14px; line-height:1.6;\">                 {{ $('03 – AI Leave Request Analyzer').item.json.output.summary }}               </div>                <!-- Status -->               <p style=\"margin-top:25px; font-size:14px;\">                 <b>Current Status:</b>                 <span style=\"background:#fff3cd; color:#856404;                   padding:6px 12px; border-radius:20px; font-weight:bold;\">                   PENDING                 </span>               </p>                <p style=\"font-size:14px; line-height:1.6;\">                 Please review this request and update the leave status                 after making your decision.               </p>                <p style=\"font-size:14px;\">                 Regards,<br>                 <b>Leave Management Automation System</b>               </p>              </td>           </tr>            <!-- Footer -->           <tr>             <td style=\"background:#f4f6f9; padding:15px; text-align:center;               color:#777777; font-size:11px;\">               This is an automated notification. Please do not reply directly               to this email.               <br><br>               © 2026 Leave Management System             </td>           </tr>          </table>        </td>     </tr>   </table>  </body> </html> ```",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        -96
+      ],
+      "id": "a0c01d70-48a9-4b7d-a5e4-af565f0b7940",
+      "name": "05 – Notify Manager via Email"
+    },
+    {
+      "parameters": {
+        "content": "Collect new employee leave submissions from Google Sheets and extract the required employee and leave details.",
+        "height": 336,
+        "width": 464,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        -240
+      ],
+      "id": "a4473d85-c794-4e1d-b4b9-2e8e26d3fe68",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Analyze employee leave requests using AI and generate a structured summary with leave duration and Pending status.",
+        "height": 496,
+        "width": 384,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        -240
+      ],
+      "id": "48bc3505-0577-41cf-b563-143a62f00b4b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Update the employee's leave record with the AI-generated summary and Pending status.",
+        "height": 336,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        304,
+        -240
+      ],
+      "id": "e32afe57-9554-4d2d-93c7-71af7fd2a323",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Send a professional HTML email to the manager containing employee details, leave dates, reason and request status.",
+        "height": 336,
+        "width": 192,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -240
+      ],
+      "id": "a1877f09-4966-42e5-b63d-2f8d69f2deb7",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 – New Leave Request Trigger": {
+      "main": [
+        [
+          {
+            "node": "\t02 – Extract Employee Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\t02 – Extract Employee Details": {
+      "main": [
+        [
+          {
+            "node": "03 – AI Leave Request Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 – AI Leave Request Analyzer": {
+      "main": [
+        [
+          {
+            "node": "04 – Update Leave Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tOpenAI – Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "03 – AI Leave Request Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tAI – Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "03 – AI Leave Request Analyzer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 – Update Leave Record": {
+      "main": [
+        [
+          {
+            "node": "05 – Notify Manager via Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
