@@ -63,6 +63,8 @@ Detailed project documentation will be added progressively.
 
 33. [Daily News Digest Agent](./Daily-News-Digest-Agent/) — Collects news from five Google News RSS topic feeds, removes duplicate headlines, ranks up to 20 articles using JavaScript keyword scoring, and analyzes summaries, categories, sentiment, and trends with GPT-5 Mini. Saves article records to Google Sheets and generates a daily digest in Google Docs. The workflow's multi-item document branch may create multiple digest documents in one run and should be checked for single-document aggregation.
 
+34. [Automated Course Feedback Collector Bot](./Automated-Course-Feedback-Collector-Bot/) — Collects course feedback through Telegram text and voice messages, transcribes voice with ElevenLabs, analyzes sentiment, topics, suggestions, and priority using GPT-5 Mini, checks duplicate feedback, and records results in Google Sheets. Sends student text/audio acknowledgements and admin alerts through Telegram and Gmail. The README documents outstanding issues including the admin Telegram destination, empty Sheets append mapping, duplicate-row matching, and disconnected validation routes.
+
 ## Technologies Used
 
 - n8n
