@@ -1,0 +1,440 @@
+{
+  "name": "LinkedIn Job Alert Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        144
+      ],
+      "id": "b3ef9802-8cc9-4302-bc11-d04cbd15b0f1",
+      "name": "Daily Job Alert Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "Datasets",
+        "datasetId": "REPLACE_WITH_YOUR_APIFY_DATASET_ID",
+        "offset": {},
+        "limit": 10,
+        "options": {},
+        "authentication": "apifyOAuth2Api"
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        144,
+        144
+      ],
+      "id": "bf253a29-298b-4fac-8a26-f3363728778d",
+      "name": "\tFetch LinkedIn Job Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst jobs = items.map(item => ({\n  json: {\n    title: item.json.title || \"\",\n    company: item.json.company || item.json.companyName || \"\",\n    location: item.json.location || \"\",\n    link: item.json.link || \"\",\n    description: item.json.descriptionText || item.json.description || \"\",\n    posted_date: item.json.postedAt || item.json.date || \"\"\n  }\n}));\n\nreturn jobs;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        144
+      ],
+      "id": "7d940893-79ed-482c-b4f6-9e3e58d2b687",
+      "name": "\tNormalize Job Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nAnalyze this LinkedIn job opportunity.\n\nJob Title: {{ $json.title }}\nCompany: {{ $json.company }}\nLocation: {{ $json.location }}\nApply Link: {{ $json.link }}\nJob Description: {{ $json.description }}\nPosted Date: {{ $json.posted_date }}\n\nCreate an accurate professional summary in 2 sentences.\n\nPreserve the original apply link.\nDo not invent missing information.\nReturn the result using the Structured Output Parser.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=\nYou are a Professional LinkedIn Job Recommendation Assistant.\n\nAnalyze the job information received from Apify.\n\nYour responsibilities:\n1. Extract the job title, company, location and apply link.\n2. Create a concise, accurate, professional job summary in 2 sentences.\n3. Extract the posting date if available.\n4. Generate a formatted notification.\n5. Never invent missing job information.\n6. If a field is unavailable, return an empty string.\n7. Preserve the original job application URL.\n\nReturn the output strictly according to the Structured Output Parser schema.\n\nDo not include Markdown code blocks or additional explanations.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        656,
+        144
+      ],
+      "id": "c0253c3b-eec4-43bb-9491-f8e07c12dbd7",
+      "name": "\tAI Job Analyzer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        576,
+        352
+      ],
+      "id": "a487b1d4-f6cf-47b7-85e9-a78a5fe644d5",
+      "name": "GPT Job Analysis Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "\n{\n  \"job_title\": \"AI & Full Stack Engineer\",\n  \"company\": \"Fancall Private Limited\",\n  \"location\": \"Ahmedabad, Gujarat, India\",\n  \"apply_link\": \"https://in.linkedin.com/jobs/view/ai-full-stack-engineer-at-fancall-private-limited-4484820173\",\n  \"summary\": \"Develops AI-powered applications and full-stack software solutions. Works on frontend, backend, API integrations and AI technologies.\",\n  \"posted_date\": \"2026-11-04\",\n  \"notification\": \"🚀 New Job Opportunity\\n\\n📌 Job Title: AI & Full Stack Engineer\\n🏢 Company: Fancall Private Limited\\n📍 Location: Ahmedabad, Gujarat, India\\n\\n📝 Summary:\\nDevelops AI-powered applications and full-stack software solutions. Works on frontend, backend, API integrations and AI technologies.\\n\\n🔗 Apply Now:\\nhttps://in.linkedin.com/jobs/view/ai-full-stack-engineer-at-fancall-private-limited-4484820173\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        352
+      ],
+      "id": "55f0c352-a051-405a-b469-a4af195fdefb",
+      "name": "Job JSON Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Job Alert"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Job Title": "={{ $json.output.job_title }}",
+            "Company": "={{ $json.output.company }}",
+            "Location": "={{ $json.output.location }}",
+            "Apply Link": "={{ $json.output.apply_link }}",
+            "Summary": "={{ $json.output.summary }}",
+            "Date": "={{ $json.output.posted_date }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Job Title",
+              "displayName": "Job Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Apply Link",
+              "displayName": "Apply Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        -64
+      ],
+      "id": "755cb19b-fab9-4f3c-b294-d20dd32b673b",
+      "name": "\tSave Jobs to Google Sheets"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nlet emailBody = \"\";\n\nfor (const item of items) {\n  const job = item.json.output || item.json;\n\n  emailBody += `\n    <div style=\"padding:15px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;\">\n      <h3>${job.job_title || \"Job Opportunity\"}</h3>\n      <p><b>Company:</b> ${job.company || \"\"}</p>\n      <p><b>Location:</b> ${job.location || \"\"}</p>\n      <p>${job.summary || \"\"}</p>\n      <p>\n        <a href=\"${job.apply_link || \"#\"}\"\n           style=\"background:#0A66C2;color:white;padding:10px 16px;text-decoration:none;border-radius:5px;\">\n          Apply Now\n        </a>\n      </p>\n    </div>\n  `;\n}\n\nreturn [{\n  json: {\n    emailBody,\n    totalJobs: items.length\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1136,
+        320
+      ],
+      "id": "aeea0c6f-228b-4008-895f-a9111f9c5ada",
+      "name": "\tBuild Daily Email HTML"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_YOUR_EMAIL",
+        "subject": "=🚀 Daily Job Alert - {{ $now.format('DD-MM-YYYY') }}",
+        "message": "=<h2>🚀 Daily Job Opportunities</h2>\n\n<p>Here are today's latest job openings:</p>\n\n{{ $json.emailBody }}\n\n<br>\n\n<p>Best of luck with your job search! 🍀</p>\n\n<hr>\n\n<p>Generated by AI Job Alert Agent</p>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1360,
+        320
+      ],
+      "id": "baaba768-ecb3-4c9d-93e5-3401f6d89594",
+      "name": "\tSend Daily Job Digest",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "content": "Triggers the workflow automatically every day at 9:00 AM.",
+        "height": 304,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        16
+      ],
+      "id": "673aac1f-49fc-460d-acca-874c28a6dad7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Fetches the latest 10 LinkedIn job records from the Apify dataset.",
+        "height": 304,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        96,
+        16
+      ],
+      "id": "89916366-cc43-45a6-b620-957f0df75953",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Cleans and standardizes job title, company, location, link, description and posting date.",
+        "height": 304,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        16
+      ],
+      "id": "2031f10a-ae9c-40d1-85ed-dc72cb9453f4",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Analyzes job details and generates accurate professional summaries and notifications. Provides AI language processing to analyze job information and generate summaries. Ensures AI responses follow a consistent structured JSON format.",
+        "height": 480,
+        "width": 416,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        16
+      ],
+      "id": "dea40c65-bbcc-4080-a104-fa5c29fecb95",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Stores job titles, companies, locations, application links, summaries and posting dates in Google Sheets.",
+        "height": 272,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -160
+      ],
+      "id": "41ba1dd2-ef7b-44b8-a6b1-8965f9ecf125",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Combines all analyzed job opportunities into a single professional HTML email.",
+        "height": 240,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        224
+      ],
+      "id": "23f51e28-c467-43a8-a5d7-e34b0cfcdd13",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Sends one consolidated daily job alert email with all collected opportunities.",
+        "height": 240,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        224
+      ],
+      "id": "506f86cd-2d1e-4c72-8924-be813a5950a7",
+      "name": "Sticky Note6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Job Alert Trigger": {
+      "main": [
+        [
+          {
+            "node": "\tFetch LinkedIn Job Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tFetch LinkedIn Job Data": {
+      "main": [
+        [
+          {
+            "node": "\tNormalize Job Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tNormalize Job Data": {
+      "main": [
+        [
+          {
+            "node": "\tAI Job Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tAI Job Analyzer": {
+      "main": [
+        [
+          {
+            "node": "\tSave Jobs to Google Sheets",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "\tBuild Daily Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT Job Analysis Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "\tAI Job Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job JSON Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "\tAI Job Analyzer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\tSave Jobs to Google Sheets": {
+      "main": [
+        []
+      ]
+    },
+    "\tBuild Daily Email HTML": {
+      "main": [
+        [
+          {
+            "node": "\tSend Daily Job Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
