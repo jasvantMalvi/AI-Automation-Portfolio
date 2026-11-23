@@ -100,3 +100,5 @@ Detailed project documentation will be added progressively.
 ---
 
 *Each project will include its purpose, workflow architecture, tools, screenshots, and setup instructions where applicable.*
+
+44. [LinkedIn Job Alert Agent](./LinkedIn-Job-Alert-Agent/) — Runs daily at 9:00 AM, reads up to 10 job records from an existing Apify dataset, normalizes job details, generates structured two-sentence summaries with GPT-5 Mini, appends records to Google Sheets, and sends a consolidated HTML Gmail digest. The README notes that the workflow does not launch the scraper, apply job relevance filters, or deduplicate repeated listings.
