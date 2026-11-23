@@ -55,6 +55,8 @@ Detailed project documentation will be added progressively.
 
 29. [AI Image Generator Bot](./AI-Image-Generator-Bot/) — Generates social-media post copy and square AI images from Telegram prompts using n8n and OpenAI models. The included workflow uploads generated images to Google Drive; Telegram photo delivery is shown separately as an alternate workflow version in the screenshots.
 
+30. [Grocery Restock Reminder Agent](./Grocery-Restock-Reminder-Agent/) — Checks purchase history and restock cycles daily using n8n and Google Sheets, identifies customers whose groceries may need replenishing, generates personalized reminder messages with OpenAI, and sends them through Telegram. The supplied workflow currently has a fixed Telegram chat ID and no reminder-history update, both documented as limitations.
+
 ## Technologies Used
 
 - n8n
