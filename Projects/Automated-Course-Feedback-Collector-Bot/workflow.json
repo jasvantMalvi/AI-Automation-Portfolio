@@ -1,0 +1,1387 @@
+{
+  "name": "Automated Course Feedback Collector Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        64
+      ],
+      "id": "eb746085-2ebd-4c64-9f43-8b9da64154d2",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst message = $json.message || {};\nconst rawText = message.text || \"\";\n\nconst lines = rawText\n  .split(\"\\n\")\n  .map(line => line.trim())\n  .filter(Boolean);\n\n// Extract student name\nconst studentNameMatch = rawText.match(\n  /Student Name\\s*:\\s*(.+)/i\n);\n\n// Extract course name\nconst courseNameMatch = rawText.match(\n  /Course Name\\s*:\\s*(.+)/i\n);\n\n// Extract rating\nconst ratingMatch = rawText.match(\n  /Rating\\s*:\\s*(\\d+(?:\\.\\d+)?)\\s*\\/\\s*5/i\n);\n\nconst studentName =\n  studentNameMatch?.[1]?.trim() ||\n  message.from?.first_name ||\n  \"\";\n\nconst courseName =\n  courseNameMatch?.[1]?.trim() || \"\";\n\nconst rating = ratingMatch\n  ? Number(ratingMatch[1])\n  : null;\n\n// Remove metadata lines to get only feedback\nconst feedbackText = lines\n  .filter(line =>\n    !/^(Student Name|Course Name|Rating)\\s*:/i.test(line)\n  )\n  .join(\" \")\n  .trim();\n\nreturn [{\n  json: {\n    update_id: $json.update_id,\n    message_id: message.message_id,\n    user_id: message.from?.id || null,\n    user_name: message.from?.first_name || null,\n    username: message.from?.username || null,\n    chat_id: message.chat?.id || null,\n    chat_type: message.chat?.type || null,\n\n    student_name: studentName,\n    student_id: message.from?.id || null,\n    course_name: courseName,\n    rating: rating,\n\n    feedback_text: feedbackText,\n    message_date: message.date || null,\n    text: rawText,\n    has_text: !!message.text,\n    has_voice: !!message.voice,\n    voice_file_id: message.voice?.file_id || null,\n    input_type: message.voice ? \"voice\" : \"text\",\n    received_at: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        64
+      ],
+      "id": "88d4ae6c-2a83-4276-80eb-ee92be1f8ca7",
+      "name": "User Context Normalizer"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('User Context Normalizer').item.json.voice_file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1008,
+        176
+      ],
+      "id": "1efd369b-5c5c-4830-91fd-ca5c20416976",
+      "name": "Get a file"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        176
+      ],
+      "id": "49497cd6-8531-4b4c-b7f0-25d8a922396f",
+      "name": "Telegram Download Voice"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nconst userContext = $('User Context Normalizer').item.json;\n\nconst studentName =\n  data.student_name ||\n  userContext.student_name ||\n  userContext.user_name ||\n  \"\";\n\nconst feedbackText =\n  data.feedback_text ||\n  data.text ||\n  \"\";\n\nconst cleanedFeedback = String(feedbackText)\n  .replace(/\\s+/g, \" \")\n  .trim();\n\nreturn [\n  {\n    json: {\n      student_name: studentName,\n      feedback_text: cleanedFeedback,\n\n      user_id:\n        data.user_id ||\n        userContext.user_id ||\n        null,\n\n      username:\n        data.username ||\n        userContext.username ||\n        null,\n\n      chat_id:\n        data.chat_id ||\n        userContext.chat_id ||\n        null,\n\n      message_id:\n        data.message_id ||\n        userContext.message_id ||\n        null,\n\n      message_date:\n        data.message_date ||\n        userContext.message_date ||\n        null,\n\n      input_type: \"text\",\n\n      course_name: userContext.course_name || \"\",\nrating: userContext.rating ?? null,\nstudent_id: userContext.student_id || null,\n\n      received_at:\n        data.received_at ||\n        userContext.received_at ||\n        new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        384
+      ],
+      "id": "300f8d28-3b9e-4acc-b281-74ebdafa44d2",
+      "name": "Normalize Feedback Input"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('User Context Normalizer').item.json.has_voice }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "16bd734e-7165-4e0a-9d1d-ece3c0d3b114"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3eeae8fd-b41b-4866-8312-d10a00cd3f5e",
+                    "leftValue": "={{ $('User Context Normalizer').item.json.has_text }}",
+                    "rightValue": "true",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        176
+      ],
+      "id": "135866f7-f955-45b6-ba98-09d106f1219d",
+      "name": "Feedback Response Router"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "570cbe05-a7a5-4f21-a56a-8b4d73e1f6df",
+              "leftValue": "={{ $('User Context Normalizer').item.json.feedback_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        400
+      ],
+      "id": "791c8e89-1685-4e93-9010-46a51fd06f76",
+      "name": "Feedback Message Check"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst userContext = $('User Context Normalizer').item.json;\n\n// ElevenLabs transcription can appear in different fields.\n// Try the common transcription fields.\nconst transcript =\n  data.text ||\n  data.transcript ||\n  data.transcription ||\n  data.output_text ||\n  \"\";\n\nconst studentName =\n  userContext.student_name ||\n  userContext.user_name ||\n  \"\";\n\nreturn [\n  {\n    json: {\n      student_name: studentName,\n      feedback_text: String(transcript).replace(/\\s+/g, \" \").trim(),\n\n      user_id: userContext.user_id || null,\n      username: userContext.username || null,\n      chat_id: userContext.chat_id || null,\n\n      message_id: userContext.message_id || null,\n      message_date: userContext.message_date || null,\n\n      input_type: \"voice\",\n\n      course_name: userContext.course_name || \"\",\nrating: userContext.rating ?? null,\nstudent_id: userContext.student_id || null,\n\n      received_at:\n        userContext.received_at ||\n        new Date().toISOString()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1424,
+        176
+      ],
+      "id": "b63262ad-bf8c-4a4b-bb5c-d515e84c6bc6",
+      "name": "Voice Feedback Normalize"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1792,
+        256
+      ],
+      "id": "5d8469dc-ca67-4b37-9aaa-fda72e92c60b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2006ab41-32d3-4909-b0cc-43eb6547891c",
+              "leftValue": "={{ $json.feedback_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        256
+      ],
+      "id": "bbb1bded-fa0a-45a7-af68-aaf6e7c1049c",
+      "name": "Feedback Data Validator"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this student course feedback:\n\nStudent Name:\n{{ $json.student_name }}\n\nFeedback:\n{{ $json.feedback_text }}\n\nReturn ONLY valid JSON in this exact format:\n\n{\n  \"student_name\": \"\",\n  \"rating\": null,\n  \"sentiment\": \"\",\n  \"topics\": [],\n  \"suggestions\": [],\n  \"priority\": \"\"\n}\n\nRules:\n- Rating must be a number from 1 to 5, or null if not mentioned.\n- Sentiment must be Positive, Neutral, or Negative.\n- Topics must contain the main topics discussed.\n- Suggestions must contain improvement suggestions. If none, return [].\n- Priority must be Low, Medium, or High.\n- Do not invent information.\n- Return JSON only. No markdown and no explanation.",
+        "options": {
+          "systemMessage": "You are an AI Course Feedback Analysis Agent.\n\nYour job is to analyze student course feedback and extract structured information.\n\nAnalyze the provided feedback and identify:\n\n1. Rating — numerical rating from 1 to 5 if mentioned.\n2. Sentiment — Positive, Neutral, or Negative.\n3. Topics — main topics discussed in the feedback.\n4. Suggestions — improvements suggested by the student.\n5. Priority — Low, Medium, or High.\n\nRules:\n- Do not invent information.\n- If rating is not mentioned, return null.\n- If suggestions are not mentioned, return an empty array.\n- Keep topics concise.\n- Priority should be High when the feedback contains a very low rating, serious complaint, urgent issue, or strong negative experience.\n- Priority should be Medium for moderate concerns or improvement requests.\n- Priority should be Low for positive feedback or minor/non-urgent comments.\n- Return ONLY valid JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2240,
+        160
+      ],
+      "id": "ce916e73-b7d8-40d9-92ed-1b60536ae3c9",
+      "name": "AI Feedback Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2192,
+        400
+      ],
+      "id": "c32e741b-06f5-439b-940b-9964bf682170",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst data = $json;\n\nconst base = $('Feedback Data Validator').first().json;\nconst original = $('User Context Normalizer').first().json;\n\nconst rawOutput =\n  data.output ||\n  data.text ||\n  data.response ||\n  \"\";\n\nlet parsed;\n\ntry {\n  parsed = typeof rawOutput === \"string\"\n    ? JSON.parse(rawOutput)\n    : rawOutput;\n} catch (error) {\n  const match = String(rawOutput).match(/\\{[\\s\\S]*\\}/);\n\n  if (!match) {\n    throw new Error(\"AI Feedback Agent did not return valid JSON.\");\n  }\n\n  parsed = JSON.parse(match[0]);\n}\n\nreturn [{\n  json: {\n    ...data,\n\n    // Student information\n    student_name:\n      original.student_name ||\n      base.student_name ||\n      parsed.student_name ||\n      \"\",\n\n    student_id:\n      original.student_id ||\n      base.student_id ||\n      null,\n\n    course_name:\n      original.course_name ||\n      base.course_name ||\n      \"\",\n\n    // Preserve original student rating\n    rating:\n      original.rating ??\n      base.rating ??\n      parsed.rating ??\n      null,\n\n    // AI analysis\n    sentiment: parsed.sentiment || \"\",\n    topics: Array.isArray(parsed.topics) ? parsed.topics : [],\n    suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],\n    priority: parsed.priority || \"\",\n\n    // Feedback details\n    feedback_text:\n      base.feedback_text ||\n      original.feedback_text ||\n      \"\",\n\n    chat_id: base.chat_id || original.chat_id || null,\n    user_id: base.user_id || original.user_id || null,\n\n    input_type: base.input_type || original.input_type || \"\",\n    received_at: base.received_at || original.received_at || null,\n\n    analyzed_at: new Date().toISOString()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        272
+      ],
+      "id": "15f367ad-9a61-4ae6-9f97-a6f9e3a24ef6",
+      "name": "Parse AI Feedback JSON"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "95d2381b-acdb-4a2d-ae98-f989d9fabe38",
+              "leftValue": "={{ $json.rating }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2864,
+        272
+      ],
+      "id": "bafd892a-30bd-4673-bf7c-97c9c402caff",
+      "name": "Feedback Rating Validator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\n\nconst hasRating =\n  data.rating !== null &&\n  data.rating !== undefined &&\n  data.rating !== \"\";\n\nconst hasSentiment =\n  typeof data.sentiment === \"string\" &&\n  data.sentiment.trim() !== \"\";\n\nconst hasTopics =\n  Array.isArray(data.topics) &&\n  data.topics.length > 0;\n\nconst hasSuggestions =\n  Array.isArray(data.suggestions);\n\nconst hasPriority =\n  typeof data.priority === \"string\" &&\n  data.priority.trim() !== \"\";\n\nconst isComplete =\n  hasRating &&\n  hasSentiment &&\n  hasTopics &&\n  hasSuggestions &&\n  hasPriority;\n\nreturn [\n  {\n    json: {\n      ...data,\n\n      has_rating: hasRating,\n      has_sentiment: hasSentiment,\n      has_topics: hasTopics,\n      has_suggestions: hasSuggestions,\n      has_priority: hasPriority,\n\n      feedback_complete: isComplete,\n\n      validation_status: isComplete\n        ? \"Complete\"\n        : \"Incomplete\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        256
+      ],
+      "id": "c503e2f0-104f-42dc-9c5f-b800048e74cf",
+      "name": "Feedback Completeness Checker"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "172667ab-9a4b-4f0c-8ad7-c5a99ff60635",
+              "leftValue": "={{ $json.feedback_complete }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3424,
+        256
+      ],
+      "id": "bb1b1a0e-d9c5-451c-b6a7-8289357bd3c2",
+      "name": "Feedback Completeness Router"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Course Feedback Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3696,
+        240
+      ],
+      "id": "b18cd2a3-444c-4467-bd22-fcde802f748b",
+      "name": "Search Existing Feedback"
+    },
+    {
+      "parameters": {
+        "jsCode": "const currentFeedback =\n  $('Feedback Data Validator').first().json.feedback_text || \"\";\n\nconst rows = $input.all();\n\nconst normalizedCurrent =\n  String(currentFeedback).trim().toLowerCase();\n\nconst duplicateRow = rows.find(item => {\n  const sheetFeedback =\n    item.json.feedback_text || \"\";\n\n  return (\n    String(sheetFeedback).trim().toLowerCase() ===\n    normalizedCurrent\n  );\n});\n\nconst baseData =\n  $('Feedback Data Validator').first().json;\n\nreturn [\n  {\n    json: {\n      ...baseData,\n\n      row_number:\n        duplicateRow?.json.row_number || null,\n\n      is_duplicate:\n        !!duplicateRow,\n\n      duplicate_status:\n        duplicateRow ? \"Duplicate\" : \"New\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3984,
+        240
+      ],
+      "id": "3392808f-7e54-4c06-8e7e-814dc89252c2",
+      "name": "Duplicate Detection Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "21c3b347-c381-4779-9635-9ee6dd69d6d4",
+              "leftValue": "={{ $json.is_duplicate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4304,
+        240
+      ],
+      "id": "6a414645-76ae-4f13-a59c-bde394e15765",
+      "name": "Duplicate Check Router"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Course Feedback Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "feedback_id",
+              "displayName": "feedback_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "student_name",
+              "displayName": "student_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "student_id",
+              "displayName": "student_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "course_name",
+              "displayName": "course_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "rating",
+              "displayName": "rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sentiment",
+              "displayName": "sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "topics",
+              "displayName": "topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suggestions",
+              "displayName": "suggestions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "feedback_text",
+              "displayName": "feedback_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "input_type",
+              "displayName": "input_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "analyzed_at",
+              "displayName": "analyzed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "duplicate_status",
+              "displayName": "duplicate_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4912,
+        368
+      ],
+      "id": "8f8e9005-e29f-42f8-9c6c-b4d73feb4cd2",
+      "name": "Save New Feedback"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Course Feedback Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "duplicate_status": "={{ $json.duplicate_status }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "schema": [
+            {
+              "id": "feedback_id",
+              "displayName": "feedback_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "student_name",
+              "displayName": "student_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "student_id",
+              "displayName": "student_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "course_name",
+              "displayName": "course_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "rating",
+              "displayName": "rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "sentiment",
+              "displayName": "sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "topics",
+              "displayName": "topics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "suggestions",
+              "displayName": "suggestions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "priority",
+              "displayName": "priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "feedback_text",
+              "displayName": "feedback_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "input_type",
+              "displayName": "input_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "analyzed_at",
+              "displayName": "analyzed_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "duplicate_status",
+              "displayName": "duplicate_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4720,
+        96
+      ],
+      "id": "0e48743e-deed-41b1-90e3-9e774d3d5afc",
+      "name": "Duplicate Feedback Update"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2ad87251-75a1-467f-a161-763cf9bce13a",
+              "name": "feedback_status",
+              "value": "Saved",
+              "type": "string"
+            },
+            {
+              "id": "9ca60bf6-5ed3-4983-8fc4-c0ba480442f9",
+              "name": "duplicate_status",
+              "value": "={{ $json.duplicate_status }}",
+              "type": "string"
+            },
+            {
+              "id": "095acab4-f98e-4be4-9af3-4b37c72a8d32",
+              "name": "admin_alert_status",
+              "value": "Pending",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        5248,
+        96
+      ],
+      "id": "f2719d84-8d9d-458c-b851-124509f095f7",
+      "name": "Feedback Status Setter"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a concise internal admin alert for this student course feedback.\n\nStudent: {{ $('Feedback Data Validator').first().json.student_name }}\nCourse: {{ $('Feedback Data Validator').first().json.course_name || 'Not provided' }}\nRating: {{ $('Feedback Data Validator').first().json.rating ?? 'Not provided' }}\nSentiment: {{ $('Parse AI Feedback JSON').first().json.sentiment }}\nPriority: {{ $('Parse AI Feedback JSON').first().json.priority }}\nTopics: {{ $('Parse AI Feedback JSON').first().json.topics.join(', ') }}\nSuggestions: {{ $('Parse AI Feedback JSON').first().json.suggestions.join(', ') }}\nFeedback: {{ $('Feedback Data Validator').first().json.feedback_text }}\n\nInclude:\n1. Student name\n2. Course\n3. Rating\n4. Main issue\n5. Suggested action\n\nReturn only the alert message. Do not invent information.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        6928,
+        256
+      ],
+      "id": "23d8535d-e015-4deb-ba60-0e819f8e73fc",
+      "name": "Admin Alert Generator"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        6864,
+        448
+      ],
+      "id": "daf0fc5b-0a51-45fa-9589-71c514fd29cf",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_ADMIN_TELEGRAM_CHAT_ID",
+        "text": "=🚨 COURSE FEEDBACK ALERT\n\n{{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        7488,
+        560
+      ],
+      "id": "8babbbdf-47f6-409b-a627-1e17f38aa85a",
+      "name": "Admin Alert Telegram"
+    },
+    {
+      "parameters": {
+        "sendTo": "REPLACE_WITH_ADMIN_EMAIL",
+        "subject": "={{ '🚨 Course Feedback Alert - ' + $('Parse AI Feedback JSON').first().json.student_name }}",
+        "emailType": "text",
+        "message": "=\n{{ \n'🚨 COURSE FEEDBACK ALERT\\n\\n' +\n'Student Name: ' + $('Parse AI Feedback JSON').first().json.student_name + '\\n' +\n'Course Name: ' + $('Parse AI Feedback JSON').first().json.course_name + '\\n' +\n'Rating: ' + $('Parse AI Feedback JSON').first().json.rating + '/5\\n' +\n'Sentiment: ' + $('Parse AI Feedback JSON').first().json.sentiment + '\\n' +\n'Priority: ' + $('Parse AI Feedback JSON').first().json.priority + '\\n\\n' +\n'Feedback:\\n' + $('Parse AI Feedback JSON').first().json.feedback_text + '\\n\\n' +\n'Topics:\\n' + $('Parse AI Feedback JSON').first().json.topics.join(', ') + '\\n\\n' +\n'Suggestions:\\n' + $('Parse AI Feedback JSON').first().json.suggestions.join(', ') + '\\n\\n' +\n'AI Admin Summary:\\n' + $('Admin Alert Generator').first().json.output + '\\n\\n' +\n'Please review this feedback and take the necessary action.'\n}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        7552,
+        80
+      ],
+      "id": "509f19df-5c26-4e72-a063-bc09b29e746d",
+      "name": "Admin Alert Email"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a short, friendly thank-you message for a student who submitted course feedback.\n\nStudent: {{ $('Duplicate Check Router').item.json.student_name }}\nCourse: {{ $('Duplicate Check Router').item.json.course_name }}\nRating: {{ $('Duplicate Check Router').item.json.rating }}\nThank the student for their feedback.\nDo not mention internal systems, priority, or admin alerts.\n\nReturn only the message.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        5584,
+        288
+      ],
+      "id": "7c49a888-8856-4972-a6dc-a7a5862463e1",
+      "name": "Student Thank You Generator"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        5456,
+        512
+      ],
+      "id": "fd84d14e-b9b7-4aee-b6bc-5f63c09064bf",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "IKne3meq5aSn9XLyUdCD",
+          "mode": "list",
+          "cachedResultName": "Charlie - Deep, Confident, Energetic"
+        },
+        "text": "={{ $('Student Thank You Generator').item.json.output }}",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        6144,
+        592
+      ],
+      "id": "e1d9124d-2e25-43cb-92cf-aecc0860b129",
+      "name": "Student Thank You Voice Generator"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('User Context Normalizer').item.json.chat_id }}",
+        "text": "={{ $('Student Thank You Generator').item.json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6176,
+        0
+      ],
+      "id": "d475318b-6a9e-4c93-be2a-4665f7c17286",
+      "name": "Student Text Response"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('User Context Normalizer').item.json.chat_id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6496,
+        592
+      ],
+      "id": "4f5a13c5-ee71-4c72-a34e-b5b209cfa44a",
+      "name": "Student Voice Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa55c22c-396e-4d88-b95c-8ea2f781838f",
+              "name": "feedback_id",
+              "value": "=FB-{{ Date.now() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4592,
+        368
+      ],
+      "id": "e59193a4-3435-4939-88c0-996c87099f11",
+      "name": "Generate Feedback ID"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "User Context Normalizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "User Context Normalizer": {
+      "main": [
+        [
+          {
+            "node": "Feedback Response Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Telegram Download Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Download Voice": {
+      "main": [
+        [
+          {
+            "node": "Voice Feedback Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Response Router": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feedback Message Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Message Check": {
+      "main": [
+        [
+          {
+            "node": "Normalize Feedback Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Voice Feedback Normalize": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Feedback Input": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Feedback Data Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Data Validator": {
+      "main": [
+        [
+          {
+            "node": "AI Feedback Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Feedback Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Feedback Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Feedback JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Feedback JSON": {
+      "main": [
+        [
+          {
+            "node": "Feedback Rating Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Rating Validator": {
+      "main": [
+        [
+          {
+            "node": "Feedback Completeness Checker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Completeness Checker": {
+      "main": [
+        [
+          {
+            "node": "Feedback Completeness Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Completeness Router": {
+      "main": [
+        [
+          {
+            "node": "Search Existing Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Existing Feedback": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Detection Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Detection Result": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Check Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Check Router": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Feedback Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Feedback ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save New Feedback": {
+      "main": [
+        [
+          {
+            "node": "Feedback Status Setter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feedback Status Setter": {
+      "main": [
+        [
+          {
+            "node": "Student Thank You Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Admin Alert Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Admin Alert Generator": {
+      "main": [
+        [
+          {
+            "node": "Admin Alert Telegram",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Admin Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Thank You Generator": {
+      "main": [
+        [
+          {
+            "node": "Student Text Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Student Thank You Voice Generator",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Admin Alert Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Student Thank You Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Thank You Voice Generator": {
+      "main": [
+        [
+          {
+            "node": "Student Voice Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Feedback Update": {
+      "main": [
+        [
+          {
+            "node": "Feedback Status Setter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Feedback ID": {
+      "main": [
+        [
+          {
+            "node": "Save New Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
