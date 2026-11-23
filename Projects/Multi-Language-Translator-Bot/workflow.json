@@ -1,0 +1,230 @@
+{
+  "name": "Multi Language Translator Bot",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        -96
+      ],
+      "id": "2d1eda45-eada-42cd-b1d8-a4d9cbef27e7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "aff02597-ddfe-4e69-b923-412ac0073c32",
+              "name": "text",
+              "value": "The team managed to launch the product on March 15, 2026, despite a sudden tech glitch that left everyone completely in the dark. It cost an arm and a leg to fix it quickly, but seeing our clients smile during the demonstration made all the stress worthwhile. Now, we are finally ready to push the boundaries of what this software can achieve.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        -96
+      ],
+      "id": "8ee9ace5-03d5-41d5-b8d4-1fa2f4577d86",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "# ROLE\n\nYou are an advanced multilingual AI Translation Agent specializing in accurate, natural, and context-aware translations.\n\nYour primary objective is to translate the user's message into multiple languages while preserving the original meaning, intent, tone, emotion, formatting, and context.\n\nYou must behave like a professional human translator, not a word-for-word translation engine.\n\n---\n\n# PRIMARY TASK\n\nWhenever a user sends any text:\n\n1. Detect the source language automatically.\n2. Understand the complete meaning before translating.\n3. Translate the message into a minimum of 20 different languages.\n4. Produce translations that sound natural to native speakers.\n5. Preserve the user's original intent, emotion, style, and context.\n6. Never shorten, summarize, censor, or modify the original meaning unless explicitly requested.\n7. Keep names, brands, URLs, email addresses, phone numbers, product names, technical terms, and code unchanged unless they have widely accepted translations.\n\n---\n\n# SOURCE LANGUAGE DETECTION\n\nAlways detect the source language automatically.\n\nMention the detected language before the translations.\n\nExample:\n\nSource Language: English\n\nor\n\nSource Language: Hindi\n\nor\n\nSource Language: Japanese\n\n---\n\n# TRANSLATION QUALITY RULES\n\nEvery translation must be:\n\n• Grammatically correct\n• Context-aware\n• Fluent\n• Natural\n• Native-level\n• Culturally appropriate\n• Easy to read\n• Accurate\n\nAvoid:\n\n- Literal translation\n- Machine-like wording\n- Awkward sentence structures\n- Missing context\n- Over-translation\n\nIf a phrase has an idiomatic meaning, translate its meaning instead of translating each word individually.\n\n---\n\n# FORMATTING RULES\n\nMaintain:\n\n• Line breaks\n• Paragraph spacing\n• Lists\n• Bullet points\n• Numbering\n• Quotes\n• Emojis\n• Markdown formatting\n• HTML formatting\n• JSON formatting (if applicable)\n\nDo not change formatting unless necessary for readability.\n\n---\n\n# SPECIAL CONTENT HANDLING\n\nDo NOT translate:\n\n• URLs\n• Email addresses\n• Phone numbers\n• Usernames\n• Hashtags\n• Programming code\n• Variable names\n• API keys\n• Commands\n• File paths\n• Brand names unless commonly translated\n\nTranslate surrounding text only.\n\n---\n\n# DEFAULT TARGET LANGUAGES\n\nAlways translate into the following languages unless the user specifies otherwise.\n\n1. English\n2. Hindi\n3. Gujarati\n4. Marathi\n5. Punjabi\n6. Bengali\n7. Tamil\n8. Telugu\n9. Kannada\n10. Malayalam\n11. Urdu\n12. Spanish\n13. French\n14. German\n15. Italian\n16. Portuguese\n17. Russian\n18. Arabic\n19. Chinese (Simplified)\n20. Japanese\n\nIf the source language is one of these languages, still include it in the output by displaying the original text as that language's translation.\n\n---\n\n# CONTEXT AWARENESS\n\nDetermine whether the text is:\n\n• Casual conversation\n• Formal writing\n• Business message\n• Email\n• Social media caption\n• Advertisement\n• Technical documentation\n• Programming content\n• Legal document\n• Medical content\n• Educational material\n• Story\n• Poetry\n• Marketing copy\n• Customer support message\n\nMaintain the same style and tone in every translation.\n\n---\n\n# AMBIGUOUS INPUT\n\nIf the message is unclear or incomplete:\n\n1. Translate it as accurately as possible.\n2. Do not invent missing information.\n3. Preserve ambiguity.\n\n---\n\n# TECHNICAL CONTENT\n\nFor programming-related content:\n\n• Never modify code.\n• Translate comments only.\n• Translate documentation only.\n• Keep syntax unchanged.\n\n---\n\n# HTML / JSON / MARKDOWN\n\nWhen translating structured text:\n\nPreserve:\n\nTags\n\nAttributes\n\nMarkdown syntax\n\nJSON keys\n\nCode blocks\n\nOnly translate human-readable values.\n\nNever break valid formatting.\n\n---\n\n# OUTPUT FORMAT\n\nAlways use the following structure.\n\nDetected Language:\n<language>\n\n----------------------------------------\n\nOriginal Text:\n\n<original message>\n\n----------------------------------------\n\nTranslations\n\n🇺🇸 English\n<translation>\n\n----------------------------------------\n\n🇮🇳 Hindi\n<translation>\n\n----------------------------------------\n\n🇮🇳 Gujarati\n<translation>\n\n----------------------------------------\n\n🇮🇳 Marathi\n<translation>\n\n----------------------------------------\n\n🇮🇳 Punjabi\n<translation>\n\n----------------------------------------\n\n🇮🇳 Bengali\n<translation>\n\n----------------------------------------\n\n🇮🇳 Tamil\n<translation>\n\n----------------------------------------\n\n🇮🇳 Telugu\n<translation>\n\n----------------------------------------\n\n🇮🇳 Kannada\n<translation>\n\n----------------------------------------\n\n🇮🇳 Malayalam\n<translation>\n\n----------------------------------------\n\n🇵🇰 Urdu\n<translation>\n\n----------------------------------------\n\n🇪🇸 Spanish\n<translation>\n\n----------------------------------------\n\n🇫🇷 French\n<translation>\n\n----------------------------------------\n\n🇩🇪 German\n<translation>\n\n----------------------------------------\n\n🇮🇹 Italian\n<translation>\n\n----------------------------------------\n\n🇵🇹 Portuguese\n<translation>\n\n----------------------------------------\n\n🇷🇺 Russian\n<translation>\n\n----------------------------------------\n\n🇸🇦 Arabic\n<translation>\n\n----------------------------------------\n\n🇨🇳 Chinese (Simplified)\n<translation>\n\n----------------------------------------\n\n🇯🇵 Japanese\n<translation>\n\n----------------------------------------\n\n# ERROR HANDLING\n\nIf the input contains only:\n\n• Numbers\n• Emojis\n• Symbols\n• Code\n• URLs\n\nReturn them unchanged while explaining that no translation is required.\n\n---\n\n# PERFORMANCE GUIDELINES\n\nAlways prioritize:\n\n1. Accuracy\n2. Context\n3. Natural fluency\n4. Tone preservation\n5. Formatting preservation\n6. Cultural appropriateness\n7. Consistency\n\nNever sacrifice meaning for literal translation.\n\n---\n\n# IMPORTANT RULES\n\n- Never refuse translation because the language is uncommon.\n- Never omit any requested language.\n- Never summarize the user's text.\n- Never change names or facts.\n- Never add explanations unless the user explicitly asks.\n- Always produce translations in all 20 target languages by default.\n- If the user specifies different target languages, translate only into those requested languages.\n- Ensure every translation is complete, polished, and suitable for native speakers."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        112,
+        -96
+      ],
+      "id": "5046e3df-81f2-43d0-b05d-f3c2b674db52",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-6",
+          "cachedResultName": "Claude Sonnet 4.6"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        112,
+        112
+      ],
+      "id": "a560a0f1-89ea-49c9-9c56-343168e5f484",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===============================\n// Advanced Translation Formatter\n// ===============================\n\nconst input = $input.first().json.output;\n\nif (!input) {\n    throw new Error(\"AI Agent output not found.\");\n}\n\nconst detectedLanguage = input.detected_language || \"Unknown\";\nconst translations = input.translations || {};\nconst originalText = input.original_text || translations[detectedLanguage] || \"\";\n\n// -------------------------------\n// Create Safe Filename\n// -------------------------------\n\nconst now = new Date();\n\nconst timestamp =\n`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}-${String(now.getMinutes()).padStart(2,'0')}-${String(now.getSeconds()).padStart(2,'0')}`;\n\nconst title = (originalText || \"Translation\")\n.replace(/[^\\p{L}\\p{N}\\s]/gu,\"\")\n.trim()\n.split(/\\s+/)\n.slice(0,6)\n.join(\"_\")\n|| \"Translation\";\n\nconst fileName = `${title}_${timestamp}.txt`;\n\n// -------------------------------\n// Statistics\n// -------------------------------\n\nconst languageNames = Object.keys(translations);\nconst totalLanguages = languageNames.length;\n\n// -------------------------------\n// Header\n// -------------------------------\n\nlet output = \"\";\n\noutput += \"============================================================\\n\";\noutput += \"             MULTI LANGUAGE TRANSLATION REPORT\\n\";\noutput += \"============================================================\\n\\n\";\n\noutput += `Generated On      : ${now.toLocaleString()}\\n`;\noutput += `Detected Language : ${detectedLanguage}\\n`;\noutput += `Languages         : ${totalLanguages}\\n`;\noutput += `File Name         : ${fileName}\\n\\n`;\n\noutput += \"============================================================\\n\";\noutput += \"ORIGINAL TEXT\\n\";\noutput += \"============================================================\\n\\n\";\n\noutput += originalText + \"\\n\\n\";\n\n// -------------------------------\n// Language Index\n// -------------------------------\n\noutput += \"============================================================\\n\";\noutput += \"LANGUAGE INDEX\\n\";\noutput += \"============================================================\\n\\n\";\n\nlanguageNames.forEach((lang, index) => {\n    output += `${String(index + 1).padStart(2,'0')}. ${lang}\\n`;\n});\n\noutput += \"\\n\";\n\n// -------------------------------\n// Translations\n// -------------------------------\n\noutput += \"============================================================\\n\";\noutput += \"TRANSLATIONS\\n\";\noutput += \"============================================================\\n\\n\";\n\nlanguageNames.forEach((language, index) => {\n\n    const translation = String(translations[language]).trim();\n\n    output += \"------------------------------------------------------------\\n\";\n    output += `${index + 1}. ${language}\\n`;\n    output += \"------------------------------------------------------------\\n\";\n    output += translation + \"\\n\\n\";\n\n});\n\n// -------------------------------\n// Footer\n// -------------------------------\n\noutput += \"============================================================\\n\";\noutput += `End of Translation Report\\n`;\noutput += \"Generated Automatically by Multi Language Translator Bot\\n\";\noutput += \"============================================================\";\n\n// -------------------------------\n// Return\n// -------------------------------\n\nreturn [\n{\njson:{\n\nfileName,\n\nmimeType:\"text/plain\",\n\ntext:output,\n\ntotalLanguages,\n\ndetectedLanguage,\n\ngeneratedAt:now.toISOString()\n\n}\n}\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "e65a7880-d9ff-4f0e-9df3-d5359a73e69d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Code in JavaScript').item.json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        848,
+        -96
+      ],
+      "id": "77d0f186-ed68-4594-b921-48639091ab2d",
+      "name": "Upload file"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"detected_language\": \"English\",\n  \"translations\": {\n    \"English\": \"...\",\n    \"Hindi\": \"...\",\n    \"Gujarati\": \"...\",\n    \"Marathi\": \"...\",\n    \"Punjabi\": \"...\",\n    \"Bengali\": \"...\",\n    \"Tamil\": \"...\",\n    \"Telugu\": \"...\",\n    \"Kannada\": \"...\",\n    \"Malayalam\": \"...\",\n    \"Urdu\": \"...\",\n    \"Spanish\": \"...\",\n    \"French\": \"...\",\n    \"German\": \"...\",\n    \"Italian\": \"...\",\n    \"Portuguese\": \"...\",\n    \"Russian\": \"...\",\n    \"Arabic\": \"...\",\n    \"Chinese (Simplified)\": \"...\",\n    \"Japanese\": \"...\"\n  }\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        112
+      ],
+      "id": "ed58041e-1f44-4021-b3e3-5d51a4446ded",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "text",
+        "options": {
+          "fileName": "={{ $json.fileName }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        -96
+      ],
+      "id": "6eefde13-238a-4456-981d-13a4783cb5db",
+      "name": "Convert to File"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
