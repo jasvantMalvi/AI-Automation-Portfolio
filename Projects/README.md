@@ -45,6 +45,8 @@ Detailed project documentation will be added progressively.
 
 24. [Multi Language Translator Bot](./Multi-Language-Translator-Bot/) — A manually triggered multilingual translation workflow using n8n, Anthropic Claude Sonnet 4.6, and Google Drive. Detects the source language, translates text into 20 configured languages, formats a structured translation report, and uploads it as a text file to Google Drive.
 
+25. [Smart Expense Tracking Bot](./Smart-Expense-Tracking-Bot/) — Logs WhatsApp expense messages using n8n, JavaScript, and Google Sheets. Extracts transaction amounts, currency, category, merchant, and payment method, then calculates and sends an expense summary through WhatsApp.
+
 ## Technologies Used
 
 - n8n
