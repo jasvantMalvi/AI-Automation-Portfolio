@@ -53,6 +53,8 @@ Detailed project documentation will be added progressively.
 
 28. [Skill Gap Analyzer Bot](./Skill-Gap-Analyzer-Bot/) — Analyzes uploaded PDF resumes against a selected target role using n8n and OpenAI. Extracts skills, identifies matching and missing skills, generates a readiness score and personalized learning roadmap, stores the analysis in Google Sheets, and emails a formatted report through Gmail. The current form does not collect a full job description.
 
+29. [AI Image Generator Bot](./AI-Image-Generator-Bot/) — Generates social-media post copy and square AI images from Telegram prompts using n8n and OpenAI models. The included workflow uploads generated images to Google Drive; Telegram photo delivery is shown separately as an alternate workflow version in the screenshots.
+
 ## Technologies Used
 
 - n8n
