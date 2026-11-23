@@ -1,0 +1,1768 @@
+{
+  "name": "Smart Grocery Budget Optimization Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -592,
+        800
+      ],
+      "id": "f721ac4d-e5c3-4e6d-9e50-01b1f53c7667",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "77cdca0a-5fd4-43d8-b7cf-c47ef22774ac",
+              "leftValue": "={{ $json.message?.text || '' }}",
+              "rightValue": "=text",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        800
+      ],
+      "id": "ef43cc73-b839-45f9-a07e-9f57e9733f33",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2b3f63a-9b18-4d2b-98f1-ebeb6a5d03c9",
+              "name": "userMessage",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        352,
+        736
+      ],
+      "id": "a7b1a8eb-c3a4-4226-8431-9d5514009495",
+      "name": "Text Message Extractor"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        160,
+        1072
+      ],
+      "id": "6eefc6c9-b3f6-4fff-961c-ac59dd57f794",
+      "name": "Get a file"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        368,
+        1072
+      ],
+      "id": "0975c850-bced-4d69-86f9-32963289510a",
+      "name": "Transcribe audio or video"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\n\nconst userMessage = String(\n  input.userMessage ??\n  input[\"User Message\"] ??\n  input.message?.text ??\n  input.text ??\n  \"\"\n).trim();\n\nif (!userMessage) {\n  throw new Error(\"No text message received.\");\n}\n\nreturn [{\n  json: {\n    ...input,\n    userMessage,\n    inputType: \"text\"\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        736
+      ],
+      "id": "17d95970-2c53-4d2b-9f5e-9e921a29a34d",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userMessage || $json.voiceText || $json[\"User Message\"] || \"\" }}",
+        "options": {
+          "systemMessage": "You are a Grocery Intent Classification Agent.\n\nRead the user's message and classify it into EXACTLY ONE intent.\n\nALLOWED INTENTS:\n\n1. grocery_budget\n2. grocery_list\n3. price_check\n4. budget_analysis\n5. general_question\n\n\nCLASSIFICATION RULES:\n\nRULE 1 — BUDGET ANALYSIS\n\nIf the user is talking about grocery spending, expenses, money spent, savings, or analyzing their grocery budget, classify as:\n\nbudget_analysis\n\nExamples:\n\n\"Analyze my grocery spending.\"\n→ budget_analysis\n\n\"I spent ₹42,500 on groceries.\"\n→ budget_analysis\n\n\"My grocery budget is ₹50,000 and I spent ₹42,500 this month.\"\n→ budget_analysis\n\n\"How much did I spend on groceries?\"\n→ budget_analysis\n\n\"How much can I save on groceries?\"\n→ budget_analysis\n\n\"Analyze my grocery expenses.\"\n→ budget_analysis\n\nIMPORTANT:\nIf the user asks to ANALYZE spending or expenses, use budget_analysis.\n\n\nRULE 2 — GROCERY BUDGET\n\nUse grocery_budget when the user is ONLY setting, asking about, or planning a grocery budget and is NOT asking to analyze spending.\n\nExamples:\n\n\"My grocery budget is ₹50,000.\"\n→ grocery_budget\n\n\"I have ₹20,000 for groceries.\"\n→ grocery_budget\n\n\"Set my grocery budget to ₹10,000.\"\n→ grocery_budget\n\n\"How much should I budget for groceries?\"\n→ grocery_budget\n\n\nRULE 3 — GROCERY LIST\n\nIf the user provides grocery items and quantities for buying or ordering, classify as:\n\ngrocery_list\n\nExample:\n\n\"Rice 10kg and milk 5L.\"\n→ grocery_list\n\nIf both a budget AND grocery items are provided:\n\n\"Budget ₹50,000. Rice 50kg and milk 20L.\"\n→ grocery_list\n\n\nRULE 4 — PRICE CHECK\n\nIf the user asks for the price of a specific grocery item, classify as:\n\nprice_check\n\nExample:\n\n\"What is the price of rice?\"\n→ price_check\n\n\"What is the current price of milk per litre?\"\n→ price_check\n\n\nRULE 5 — GENERAL QUESTION\n\nUse general_question only when the message does not match any grocery-related intent above.\n\n\nBUDGET EXTRACTION RULES:\n\n- The budget field must ALWAYS be a NUMBER or null.\n- Never return a string containing multiple amounts.\n- If the user says \"My budget is ₹50,000 and I spent ₹42,500\", the budget is 50000.\n- Do NOT return \"42500 or 50000 INR\".\n- The spending amount should NOT be placed in the budget field.\n- Do not invent a budget.\n\n\nEXTRACTION RULES:\n\n- Return the original user message in the \"message\" field.\n- Extract grocery items when provided.\n- Extract quantities when provided.\n- Do not invent information.\n- Use empty arrays when information is unavailable.\n- Use null when the budget is not provided.\n\n\nRETURN ONLY VALID JSON:\n\n{\n  \"intent\": \"\",\n  \"message\": \"\",\n  \"budget\": null,\n  \"items\": [],\n  \"quantity\": [],\n  \"preferences\": [],\n  \"constraints\": []\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        960,
+        736
+      ],
+      "id": "7ff0c3c3-dfac-4975-9d8a-78be68326c8c",
+      "name": "Grocery Intent Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        960
+      ],
+      "id": "c895b7ba-f896-4f00-a13d-ece0b7b462f1",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\n\nlet parsed;\n\ntry {\n  parsed = typeof input.output === \"string\"\n    ? JSON.parse(input.output)\n    : input.output;\n} catch (error) {\n  throw new Error(\"Intent Parser returned invalid JSON.\");\n}\n\nif (!parsed || typeof parsed !== \"object\") {\n  throw new Error(\"Intent Parser returned an invalid result.\");\n}\n\nconst allowedIntents = [\n  \"grocery_budget\",\n  \"grocery_list\",\n  \"price_check\",\n  \"budget_analysis\",\n  \"general_question\"\n];\n\nif (!allowedIntents.includes(parsed.intent)) {\n  throw new Error(`Invalid intent: ${parsed.intent}`);\n}\n\nconst message = input.userMessage || \"\";\n\nconst budgetMatch = message.match(/₹\\s*([\\d,]+)/);\n\nconst budget =\n  parsed.budget !== null && parsed.budget !== undefined\n    ? Number(parsed.budget)\n    : budgetMatch\n      ? Number(budgetMatch[1].replace(/,/g, \"\"))\n      : null;\n\nif (budget !== null && (!Number.isFinite(budget) || budget < 0)) {\n  throw new Error(\"Invalid budget received.\");\n}\n\nreturn [{\n  json: {\n    ...input,\n    intent: parsed.intent,\n    message: parsed.message || input.userMessage || \"\",\n    budget,\n    items: Array.isArray(parsed.items) ? parsed.items : [],\n    quantity: Array.isArray(parsed.quantity) ? parsed.quantity : [],\n    preferences: Array.isArray(parsed.preferences) ? parsed.preferences : [],\n    constraints: Array.isArray(parsed.constraints) ? parsed.constraints : []\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1296,
+        736
+      ],
+      "id": "d38c355f-204e-4490-9d8b-e90b165450e1",
+      "name": "Parse Grocery Intent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "grocery_budget",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "9bf43a74-f133-4da2-aa91-bff193dcea8f"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Grocery Budget"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6740f8e5-0f84-41e2-a061-2988af508b66",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "grocery_list",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Grocery List"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2a2f1980-372f-492b-aafc-c7ce795373b2",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "price_check",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Price Check"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a8957061-6cae-4644-8a2d-81aba8bb60a8",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "budget_analysis",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Budget Analysis"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9978bc55-7fb4-4616-84e1-d7adeb014f00",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "general_question",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "General Question"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        736
+      ],
+      "id": "8233bbe4-b26e-4184-af8e-05b5a2e1a688",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nreturn [\n  {\n    json: {\n      intent: input.intent || \"grocery_list\",\n      message: input.message || \"\",\n      budget: Number(input.budget || 0),\n      items: input.items || [],\n      quantities: input.quantity || [],\n      preferences: input.preferences || [],\n      constraints: input.constraints || [],\n      currency: \"INR\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        336
+      ],
+      "id": "6dbaec40-e6a6-4dde-9d45-5202c5d99fc9",
+      "name": "Prepare Grocery Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst items = input.items || [];\nconst quantities = input.quantities || [];\n\nconst groceryItems = items.map((item, index) => ({\n  item: String(item).trim(),\n  quantity: quantities[index] || \"Not specified\"\n}));\n\nreturn [\n  {\n    json: {\n      ...input,\n      groceryItems,\n      itemCount: groceryItems.length\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2416,
+        336
+      ],
+      "id": "756fa4a8-7424-406b-953e-249202f51ed4",
+      "name": "Build Grocery Item List"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  groceryItems: $json.groceryItems\n}) }}",
+        "options": {
+          "systemMessage": "You are a Grocery Price Research Assistant.\n\nAnalyze the provided grocery items and quantities.\n\nFor each item:\n1. Identify the grocery item.\n2. Estimate a reasonable current retail price in India.\n3. Calculate the estimated cost based on the provided quantity.\n4. Provide a brief explanation if the quantity unit requires an assumption.\n\nReturn ONLY valid JSON in this format:\n\n{\n  \"items\": [\n    {\n      \"item\": \"Rice\",\n      \"quantity\": \"50kg\",\n      \"estimated_unit_price\": 0,\n      \"estimated_total\": 0,\n      \"unit\": \"kg\"\n    }\n  ],\n  \"total_estimated_cost\": 0,\n  \"currency\": \"INR\"\n}\n\nRules:\n- Do not invent unavailable grocery items.\n- Use INR.\n- Keep calculations consistent.\n- If an exact price cannot be determined, provide a reasonable estimate.\n- Return JSON only."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2592,
+        336
+      ],
+      "id": "0b915e9d-4d3b-4ad2-8a6a-1001285138b9",
+      "name": "AI Agent – Grocery Price Researcher"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2496,
+        528
+      ],
+      "id": "507820ad-2266-405a-bc84-f3b6f4d11aa9",
+      "name": "OpenAI Chat Model1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      budget: Number(input.budget ?? 0),\n      items: parsed.items || [],\n      totalEstimatedCost: Number(parsed.total_estimated_cost || 0),\n      currency: parsed.currency || \"INR\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        336
+      ],
+      "id": "343704f1-30ef-423e-a6b3-1752eec904e3",
+      "name": "Parse Grocery Price Research"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget || 0);\nconst estimatedCost = Number(input.totalEstimatedCost || 0);\n\nconst remainingBudget = budget - estimatedCost;\n\nlet budgetStatus;\n\nif (estimatedCost > budget) {\n  budgetStatus = \"OVER_BUDGET\";\n} else if (estimatedCost === budget) {\n  budgetStatus = \"ON_BUDGET\";\n} else {\n  budgetStatus = \"WITHIN_BUDGET\";\n}\n\nconst utilizationPercentage =\n  budget > 0\n    ? Number(((estimatedCost / budget) * 100).toFixed(2))\n    : 0;\n\nreturn [\n  {\n    json: {\n      ...input,\n      budget,\n      budgetAnalysis: {\n        budget,\n        estimatedCost,\n        remainingBudget,\n        utilizationPercentage,\n        budgetStatus\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3136,
+        336
+      ],
+      "id": "661a111f-844e-40dd-8dd0-f18ce50f3608",
+      "name": "Calculate Grocery Budget"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3280,
+        544
+      ],
+      "id": "d7628f71-b175-400b-b748-479037d098c4",
+      "name": "OpenAI Chat Model2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  groceryItems: $json.groceryItems,\n  priceResearch: $json.items,\n  budgetAnalysis: $json.budgetAnalysis\n}) }}",
+        "options": {
+          "systemMessage": "You are an AI Grocery Budget Optimization Expert.\n\nAnalyze the user's grocery list, requested quantities, estimated prices, and available budget.\n\nYour goal is to find practical ways to optimize the grocery purchase while respecting the user's requirements.\n\nConsider:\n- Current estimated cost\n- Available budget\n- Remaining budget\n- Expensive items\n- Quantity requirements\n- Lower-cost alternatives\n- Wholesale or supplier options\n- Estimated savings\n\nIMPORTANT RULES:\n- Never assume the budget is zero.\n- Preserve the user's budget exactly.\n- Do NOT automatically reduce requested quantities.\n- Treat requested quantities as fixed requirements by default.\n- Prefer cheaper brands, suppliers, bulk pricing, or equivalent alternatives.\n- Only suggest quantity reduction as a final OPTIONAL recommendation.\n- Never remove essential grocery items without clearly explaining it.\n- Do not invent grocery items.\n- Keep all calculations mathematically consistent.\n- Use INR.\n\nReturn ONLY valid JSON:\n\n{\n  \"optimization_status\": \"OPTIMIZED\",\n  \"original_cost\": 0,\n  \"optimized_cost\": 0,\n  \"estimated_savings\": 0,\n  \"recommendations\": [\n    {\n      \"item\": \"\",\n      \"action\": \"\",\n      \"reason\": \"\",\n      \"estimated_savings\": 0\n    }\n  ],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3360,
+        336
+      ],
+      "id": "4a5f42b4-b91d-4ec0-88cf-a7906c5726f9",
+      "name": "Grocery Budget Optimizer"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      budget: input.budget == null ? null : Number(input.budget),\n      groceryItems: input.groceryItems || [],\n      priceResearch: input.priceResearch || input.items || [],\n\n      optimizationStatus:\n        parsed.optimization_status || \"OPTIMIZED\",\n\n      originalCost:\n        Number(parsed.original_cost || 0),\n\n      optimizedCost:\n        Number(parsed.optimized_cost || 0),\n\n      estimatedSavings:\n        Number(parsed.estimated_savings || 0),\n\n      recommendations:\n        parsed.recommendations || [],\n\n      optimizationSummary:\n        parsed.summary || \"\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3696,
+        336
+      ],
+      "id": "523bde81-3d80-4a5d-8413-4db631be8473",
+      "name": "Parse Optimization Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a2c55ce5-cf4f-4d4a-9d8b-c6a1f0ef7a5e",
+              "leftValue": "={{ $json.optimizedCost }}",
+              "rightValue": "={{ $json.budget }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3888,
+        336
+      ],
+      "id": "e138d7eb-992f-4314-82a0-2ba17c8ae56b",
+      "name": "Budget Status"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  groceryItems: $json.groceryItems,\n  optimizedCost: $json.optimizedCost,\n  estimatedSavings: $json.estimatedSavings,\n  recommendations: $json.recommendations\n}) }}",
+        "options": {
+          "systemMessage": "You are a Budget Recovery Optimization Agent.\n\nThe user's optimized grocery cost is still above the available budget.\n\nYour task is to create a practical recovery plan.\n\nPriorities:\n1. Keep essential grocery items.\n2. Find cheaper alternatives.\n3. Suggest lower-cost brands or product alternatives.\n4. Suggest quantity reduction ONLY when absolutely necessary.\n5. Clearly mark quantity reductions as OPTIONAL.\n6. Never change the user's budget.\n7. Never invent unavailable products.\n8. Calculate the revised estimated cost and savings.\n\nReturn ONLY valid JSON:\n\n{\n  \"status\": \"BUDGET_EXCEEDED\",\n  \"current_cost\": 0,\n  \"target_budget\": 0,\n  \"revised_cost\": 0,\n  \"additional_savings_needed\": 0,\n  \"recommendations\": [],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4112,
+        432
+      ],
+      "id": "9ac91582-de4a-4f12-bb6d-6a98fa1f9b14",
+      "name": "Budget Recovery Optimizer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3984,
+        640
+      ],
+      "id": "0477d5fa-ef1d-4a45-9ae7-7890ff3f3643",
+      "name": "OpenAI Chat Model3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget || 0);\nconst originalCost = Number(input.originalCost || 0);\nconst optimizedCost = Number(input.optimizedCost || 0);\nconst estimatedSavings = Number(input.estimatedSavings || 0);\n\nconst remainingBudget = budget - optimizedCost;\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      finalReport: {\n        budget,\n        originalCost,\n        optimizedCost,\n        estimatedSavings,\n        remainingBudget,\n        budgetStatus: optimizedCost <= budget\n          ? \"WITHIN_BUDGET\"\n          : \"OVER_BUDGET\",\n        optimizationStatus: input.optimizationStatus,\n        recommendations: input.recommendations || [],\n        summary: input.optimizationSummary || \"\"\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4112,
+        240
+      ],
+      "id": "51e91e9e-ecf2-488c-8087-f648634e84b6",
+      "name": "Prepare Final Grocery Report"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify($json.finalReport) }}",
+        "options": {
+          "systemMessage": "You are a Final Grocery Budget Advisor.\n\nCreate a clear and practical final response for the user based on the optimized grocery budget analysis.\n\nInclude:\n- Original estimated cost\n- Optimized cost\n- Total savings\n- Remaining budget\n- Budget status\n- Key recommendations\n\nDo not change any numbers.\nDo not invent information.\nKeep the response concise and professional.\n\nReturn ONLY valid JSON:\n\n{\n  \"status\": \"\",\n  \"original_cost\": 0,\n  \"optimized_cost\": 0,\n  \"savings\": 0,\n  \"remaining_budget\": 0,\n  \"message\": \"\",\n  \"recommendations\": []\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4368,
+        48
+      ],
+      "id": "4abd46bd-b098-447b-afbd-bb12c0aefa99",
+      "name": "Final Grocery Advisor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        4336,
+        240
+      ],
+      "id": "9d99626b-20ce-4c77-b5ea-8794213b598d",
+      "name": "OpenAI Chat Model4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      finalStatus: parsed.status || \"OPTIMIZED\",\n      finalOriginalCost: Number(parsed.original_cost || 0),\n      finalOptimizedCost: Number(parsed.optimized_cost || 0),\n      finalSavings: Number(parsed.savings || 0),\n      finalRemainingBudget: Number(parsed.remaining_budget || 0),\n      finalMessage: parsed.message || \"\",\n      finalRecommendations: parsed.recommendations || []\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4736,
+        48
+      ],
+      "id": "be0590c2-6053-4423-a505-6ee0219db147",
+      "name": "Parse Final Grocery Advisor"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\n\n// Safely parse the AI output if it arrives as a JSON string\nlet advisor = {};\n\ntry {\n  advisor = typeof input.output === \"string\"\n    ? JSON.parse(input.output)\n    : (input.output || {});\n} catch (error) {\n  advisor = {};\n}\n\n// Read the financial values\nconst originalCost = Number(\n  input.finalOriginalCost ?? advisor.original_cost ?? 0\n);\n\nconst optimizedCost = Number(\n  input.finalOptimizedCost ?? advisor.optimized_cost ?? 0\n);\n\n// Recover the budget.\n// Priority: actual user budget -> budget in advisor output ->\n// remaining budget + optimized cost.\nlet budget = Number(\n  input.budget ??\n  advisor.budget ??\n  (\n    input.finalRemainingBudget != null\n      ? Number(input.finalRemainingBudget) + optimizedCost\n      : advisor.remaining_budget != null\n        ? Number(advisor.remaining_budget) + optimizedCost\n        : NaN\n  )\n);\n\n// Stop if the budget cannot be recovered.\n// Do not silently assume the budget is zero.\nif (!Number.isFinite(budget)) {\n  throw new Error(\n    \"Budget is missing. Pass the user's budget into this node from an upstream node.\"\n  );\n}\n\n// Calculate all financial values using JavaScript\nconst savings = originalCost - optimizedCost;\nconst remainingBudget = budget - optimizedCost;\n\nlet budgetStatus;\n\nif (remainingBudget > 0) {\n  budgetStatus = \"WITHIN_BUDGET\";\n} else if (remainingBudget === 0) {\n  budgetStatus = \"ON_BUDGET\";\n} else {\n  budgetStatus = \"OVER_BUDGET\";\n}\n\n// Read recommendations\nconst recommendations =\n  input.finalRecommendations ??\n  advisor.recommendations ??\n  [];\n\n// Remove quantity-reduction suggestions when the optimized\n// grocery cost is already within the user's budget.\nconst filteredRecommendations = recommendations.filter(rec => {\n  const item = String(\n    typeof rec === \"string\" ? rec : rec.item || \"\"\n  ).toLowerCase();\n\n  if (\n    remainingBudget >= 0 &&\n    (\n      item.includes(\"optional\") ||\n      item.includes(\"quantity reduction\")\n    )\n  ) {\n    return false;\n  }\n\n  return true;\n});\n\n// Format recommendations\nconst recommendationText = filteredRecommendations\n  .map((rec, index) => {\n    if (typeof rec === \"string\") {\n      return `${index + 1}. ${rec}`;\n    }\n\n    return `${index + 1}. *${rec.item || \"General recommendation\"}*\n\nAction: ${rec.action || \"Not specified\"}\n\nReason: ${rec.reason || \"Not specified\"}\n\nEstimated Savings: ₹${Number(\n      rec.estimated_savings || 0\n    ).toLocaleString(\"en-IN\")}`;\n  })\n  .join(\"\\n\\n\");\n\n// Currency formatter\nconst formatINR = value =>\n  `₹${Number(value).toLocaleString(\"en-IN\")}`;\n\n// Build Telegram message\nconst message = `🛒 *Smart Grocery Budget Report*\n\n💰 *Total Budget:* ${formatINR(budget)}\n\n📊 *Original Cost:* ${formatINR(originalCost)}\n\n✨ *Optimized Cost:* ${formatINR(optimizedCost)}\n\n💸 *Estimated Savings:* ${formatINR(savings)}\n\n💵 *Remaining Budget:* ${formatINR(remainingBudget)}\n\n${budgetStatus === \"OVER_BUDGET\" ? \"⚠️\" : \"✅\"} *Status:* ${budgetStatus}\n\n📝 *Summary:*\n${input.finalMessage || advisor.message || \"Optimization completed.\"}\n\n💡 *Recommendations:*\n${recommendationText || \"No recommendations available.\"}\n\n⚠️ Prices are estimates, not verified live market prices.`;\n\n// Return final data\nreturn [\n  {\n    json: {\n      ...input,\n      budget,\n      finalOriginalCost: originalCost,\n      finalOptimizedCost: optimizedCost,\n      finalSavings: savings,\n      finalRemainingBudget: remainingBudget,\n      finalStatus: budgetStatus,\n      finalRecommendations: filteredRecommendations,\n      telegramMessage: message\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4960,
+        48
+      ],
+      "id": "e717fe56-299a-48c4-9424-aa6f9de0d714",
+      "name": "Format Telegram Response"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5184,
+        48
+      ],
+      "id": "fa665d57-c9f3-4c70-b425-1091e0035e23",
+      "name": "Send Final Grocery Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      recoveryStatus:\n        parsed.status || \"BUDGET_EXCEEDED\",\n\n      recoveryCurrentCost:\n        Number(parsed.current_cost || input.optimizedCost || 0),\n\n      recoveryTargetBudget:\n        Number(parsed.target_budget || input.budget || 0),\n\n      recoveryRevisedCost:\n        Number(parsed.revised_cost || 0),\n\n      additionalSavingsNeeded:\n        Number(parsed.additional_savings_needed || 0),\n\n      recoveryRecommendations:\n        parsed.recommendations || [],\n\n      recoverySummary:\n        parsed.summary || \"\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4464,
+        432
+      ],
+      "id": "265d5b58-f1aa-447e-aea1-8cebd2767e0f",
+      "name": "Parse Budget Recovery Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst recommendations = input.recoveryRecommendations || [];\n\nlet recommendationText = \"\";\n\nif (recommendations.length > 0) {\n  recommendationText = recommendations\n    .map((rec, index) => {\n      if (typeof rec === \"string\") {\n        return `${index + 1}. ${rec}`;\n      }\n\n      return `${index + 1}. ${rec.item || \"General\"}: ${rec.action || \"\"} — ${rec.reason || \"\"}`;\n    })\n    .join(\"\\n\");\n}\n\nconst message = `⚠️ *Grocery Budget Recovery Plan*\n\n💰 *Available Budget:* ₹${input.recoveryTargetBudget}\n\n📊 *Current Cost:* ₹${input.recoveryCurrentCost}\n\n🎯 *Revised Cost:* ₹${input.recoveryRevisedCost}\n\n💸 *Additional Savings Needed:* ₹${input.additionalSavingsNeeded}\n\n📝 *Summary:*\n${input.recoverySummary}\n\n💡 *Recovery Recommendations:*\n${recommendationText}`;\n\nreturn [\n  {\n    json: {\n      ...input,\n      recoveryTelegramMessage: message\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4688,
+        432
+      ],
+      "id": "9b711117-4006-4cf1-b73e-1d56e4ecfcbd",
+      "name": "Format Recovery Report"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.recoveryTelegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4896,
+        432
+      ],
+      "id": "09cc8d0d-9670-45b0-8a86-923dcc1ea57f",
+      "name": "Send Final Grocery Report1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\n\nconst userMessage = String(\n  input.text ??\n  input.transcription ??\n  input.transcript ??\n  input.data?.text ??\n  \"\"\n).trim();\n\nif (!userMessage) {\n  throw new Error(\"Voice transcription is empty.\");\n}\n\nreturn [{\n  json: {\n    ...input,\n    userMessage,\n    inputType: \"voice\"\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        1072
+      ],
+      "id": "24b2115a-677c-4dd5-904b-d715e538cc8f",
+      "name": "Normalize Voice Text"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nreturn [\n  {\n    json: {\n      ...input,\n      budget: Number(input.budget || 0),\n      currency: \"INR\",\n      requestType: \"grocery_budget\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2192,
+        -128
+      ],
+      "id": "a6861668-1447-4c26-be32-1095370acac2",
+      "name": "Prepare Budget Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  currency: $json.currency,\n  requestType: $json.requestType,\n  message: $json.message,\n  preferences: $json.preferences,\n  constraints: $json.constraints\n}) }}",
+        "options": {
+          "systemMessage": "You are an AI Grocery Budget Advisor.\n\nYour job is to analyze the user's grocery budget request and provide practical budget guidance.\n\nAnalyze:\n- Total grocery budget\n- Currency\n- Budget period if mentioned\n- Any preferences or constraints provided by the user\n\nIMPORTANT RULES:\n- Preserve the user's budget exactly.\n- Do not invent expenses or grocery items.\n- If the user has not provided grocery items, do not create a grocery list.\n- Provide reasonable spending categories only as recommendations.\n- Keep all calculations mathematically consistent.\n- Use INR.\n- Return ONLY valid JSON.\n\nReturn this format:\n\n{\n  \"budget\": 0,\n  \"currency\": \"INR\",\n  \"period\": \"\",\n  \"recommended_allocation\": [\n    {\n      \"category\": \"\",\n      \"amount\": 0,\n      \"percentage\": 0\n    }\n  ],\n  \"remaining_budget\": 0,\n  \"advice\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2432,
+        -128
+      ],
+      "id": "6bd14a33-f6c5-4cb0-8140-bf35e6218171",
+      "name": "Grocery Budget Advisor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2368,
+        48
+      ],
+      "id": "fc054bc9-52f6-4035-b1f6-a0ab61e80ad1",
+      "name": "OpenAI Chat Model5"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      budget: Number(parsed.budget || input.budget || 0),\n\n      currency: parsed.currency || input.currency || \"INR\",\n\n      period: parsed.period || \"\",\n\n      recommendedAllocation:\n        parsed.recommended_allocation || [],\n\n      remainingBudget:\n        Number(parsed.remaining_budget || 0),\n\n      advice:\n        parsed.advice || \"\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2784,
+        -128
+      ],
+      "id": "5022fb91-fdf3-4fe9-9f35-8f004bf76681",
+      "name": "Parse Grocery Budget Advisor"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget || 0);\nconst allocations = input.recommendedAllocation || [];\n\nconst totalAllocated = allocations.reduce(\n  (sum, item) => sum + Number(item.amount || 0),\n  0\n);\n\nconst remainingBudget = budget - totalAllocated;\n\nconst allocationPercentage =\n  budget > 0\n    ? Number(((totalAllocated / budget) * 100).toFixed(2))\n    : 0;\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      budgetAnalysis: {\n        totalBudget: budget,\n        totalAllocated,\n        remainingBudget,\n        allocationPercentage,\n        allocationStatus:\n          remainingBudget > 0\n            ? \"WITHIN_BUDGET\"\n            : remainingBudget === 0\n              ? \"FULLY_ALLOCATED\"\n              : \"OVER_ALLOCATED\"\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3008,
+        -128
+      ],
+      "id": "71f3d62a-4d21-4495-9474-84a49bb01f6a",
+      "name": "Calculate Budget Allocation"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  currency: $json.currency,\n  allocations: $json.recommendedAllocation,\n  budgetAnalysis: $json.budgetAnalysis,\n  originalAdvice: $json.advice\n}) }}",
+        "options": {
+          "systemMessage": "You are an AI Grocery Budget Recommendation Agent.\n\nAnalyze the user's grocery budget and the recommended category allocation.\n\nProvide practical recommendations to help the user manage their grocery budget effectively.\n\nConsider:\n- Total budget\n- Category allocations\n- Remaining budget\n- Spending priorities\n- Possible savings\n- Budget flexibility\n\nIMPORTANT RULES:\n- Preserve the user's budget.\n- Do not invent grocery purchases.\n- Do not change the calculated budget values.\n- Recommendations must be practical and concise.\n- Use INR.\n- Return ONLY valid JSON.\n\nReturn exactly this structure:\n\n{\n  \"budget\": 0,\n  \"total_allocated\": 0,\n  \"remaining_budget\": 0,\n  \"recommendations\": [\n    {\n      \"category\": \"\",\n      \"recommendation\": \"\",\n      \"potential_saving\": 0\n    }\n  ],\n  \"summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        3248,
+        -176
+      ],
+      "id": "e12d5076-2b63-4cb1-b49e-b39b2c681757",
+      "name": "Grocery Budget Recommendations"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        3200,
+        16
+      ],
+      "id": "5772d5dc-61b6-4f39-9a0e-5757a4232c1a",
+      "name": "OpenAI Chat Model6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      budget:\n        Number(parsed.budget || input.budget || 0),\n\n      totalAllocated:\n        Number(parsed.total_allocated || 0),\n\n      remainingBudget:\n        Number(parsed.remaining_budget || 0),\n\n      recommendations:\n        parsed.recommendations || [],\n\n      recommendationSummary:\n        parsed.summary || \"\",\n\n      currency:\n        input.currency || \"INR\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3616,
+        -176
+      ],
+      "id": "deba36ba-a9e3-4ebb-8fda-5db4b6d23b94",
+      "name": "Parse Budget Recommendations"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget || 0);\nconst totalAllocated = Number(input.totalAllocated || 0);\nconst remainingBudget = Number(input.remainingBudget || 0);\n\nconst recommendations = input.recommendations || [];\n\nlet message = `🛒 *Grocery Budget Plan*\\n\\n`;\n\nmessage += `💰 *Total Budget:* ₹${budget.toLocaleString(\"en-IN\")}\\n`;\nmessage += `📊 *Allocated:* ₹${totalAllocated.toLocaleString(\"en-IN\")}\\n`;\nmessage += `💵 *Remaining:* ₹${remainingBudget.toLocaleString(\"en-IN\")}\\n\\n`;\n\nif (recommendations.length > 0) {\n  message += `📌 *Recommendations:*\\n\\n`;\n\n  recommendations.forEach((rec, index) => {\n    message += `${index + 1}. *${rec.category || \"General\"}*\\n`;\n    message += `   ${rec.recommendation || \"\"}\\n`;\n\n    if (rec.potential_saving) {\n      message += `   💡 Potential Saving: ₹${Number(\n        rec.potential_saving\n      ).toLocaleString(\"en-IN\")}\\n`;\n    }\n\n    message += `\\n`;\n  });\n}\n\nif (input.recommendationSummary) {\n  message += `📝 *Summary:*\\n${input.recommendationSummary}\\n`;\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      telegramMessage: message.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3840,
+        -176
+      ],
+      "id": "73e08dc0-0690-4f62-869d-38d2d879ee9e",
+      "name": "Format Budget Report"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4048,
+        -176
+      ],
+      "id": "cd417d63-3a3c-4a50-b776-d70aa5d21d07",
+      "name": "Send Budget Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst items = input.items || [];\n\nreturn [\n  {\n    json: {\n      ...input,\n      intent: \"price_check\",\n      priceCheckItem: items[0] || \"\",\n      currency: \"INR\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        784
+      ],
+      "id": "e9fb58aa-3f9c-42b5-a90f-75114dba5841",
+      "name": "Prepare Price Check Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  item: $json.priceCheckItem,\n  message: $json.message,\n  currency: $json.currency\n}) }}",
+        "options": {
+          "systemMessage": "You are an AI Grocery Price Checker.\n\nYour task is to provide an estimated current retail price for the requested grocery item in India.\n\nAnalyze:\n- Grocery item\n- Quantity/unit if provided\n- Indian retail market context\n\nIMPORTANT:\n- Do not invent multiple grocery items.\n- Focus only on the requested item.\n- Use INR.\n- If an exact live market price is unavailable, clearly identify the result as an estimated price.\n- Do not claim that the price is live or real-time unless verified by a live source.\n- Return ONLY valid JSON.\n\nReturn exactly:\n\n{\n  \"item\": \"\",\n  \"estimated_unit_price\": 0,\n  \"unit\": \"\",\n  \"currency\": \"INR\",\n  \"price_type\": \"estimated\",\n  \"price_range\": {\n    \"minimum\": 0,\n    \"maximum\": 0\n  },\n  \"advice\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2416,
+        784
+      ],
+      "id": "6b229160-8c12-4df0-b695-4e04699e76b3",
+      "name": "Grocery Price Checker"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2272,
+        976
+      ],
+      "id": "d40958d8-d62c-4254-9a0b-80b2ce9b1f52",
+      "name": "OpenAI Chat Model7"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nlet parsed = {};\n\nif (typeof input.output === \"string\") {\n  try {\n    parsed = JSON.parse(input.output);\n  } catch (error) {\n    parsed = {};\n  }\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n\n      priceCheckItem:\n        parsed.item || input.priceCheckItem || \"\",\n\n      estimatedUnitPrice:\n        Number(parsed.estimated_unit_price || 0),\n\n      unit:\n        parsed.unit || \"\",\n\n      currency:\n        parsed.currency || \"INR\",\n\n      priceType:\n        parsed.price_type || \"estimated\",\n\n      priceRange:\n        parsed.price_range || {\n          minimum: 0,\n          maximum: 0\n        },\n\n      priceAdvice:\n        parsed.advice || \"\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2768,
+        784
+      ],
+      "id": "be78759a-4952-4341-9d2b-f087d2f7d25b",
+      "name": "Parse Price Check Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst item = input.priceCheckItem || \"Unknown item\";\nconst price = Number(input.estimatedUnitPrice || 0);\nconst unit = input.unit || \"unit\";\nconst currency = input.currency || \"INR\";\n\nconst minimum = Number(input.priceRange?.minimum || 0);\nconst maximum = Number(input.priceRange?.maximum || 0);\n\nlet message = `🛒 *Grocery Price Check*\\n\\n`;\n\nmessage += `📦 *Item:* ${item}\\n`;\nmessage += `💰 *Estimated Price:* ₹${price.toLocaleString(\"en-IN\")} / ${unit}\\n`;\n\nif (minimum > 0 && maximum > 0) {\n  message += `📊 *Estimated Range:* ₹${minimum.toLocaleString(\n    \"en-IN\"\n  )} - ₹${maximum.toLocaleString(\"en-IN\")} / ${unit}\\n`;\n}\n\nmessage += `\\n⚠️ *Price Type:* ${input.priceType || \"estimated\"}\\n`;\n\nif (input.priceAdvice) {\n  message += `\\n💡 *Advice:*\\n${input.priceAdvice}`;\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      telegramMessage: message.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2992,
+        784
+      ],
+      "id": "504f5a5a-768b-401c-9ecf-98cd5fea4dca",
+      "name": "Format Price Check Response"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3200,
+        784
+      ],
+      "id": "2b5c5313-2db6-4598-b93f-818caf9ba394",
+      "name": "Send Budget Report1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst message = String(\n  input.analysisRequest ||\n  input.message ||\n  \"\"\n);\n\nconst numbers = [...message.matchAll(/(?:₹|Rs\\.?|INR)?\\s*([\\d,]+(?:\\.\\d+)?)/gi)]\n  .map(m => Number(m[1].replace(/,/g, \"\")))\n  .filter(n => !isNaN(n));\n\nlet budget = 0;\nlet spent = 0;\n\nconst budgetMatch = message.match(\n  /budget\\s*(?:is|of|:)?\\s*(?:₹|Rs\\.?|INR)?\\s*([\\d,]+)/i\n);\n\nconst spentMatch = message.match(\n  /spent\\s*(?:₹|Rs\\.?|INR)?\\s*([\\d,]+)/i\n);\n\nif (budgetMatch) {\n  budget = Number(budgetMatch[1].replace(/,/g, \"\"));\n}\n\nif (spentMatch) {\n  spent = Number(spentMatch[1].replace(/,/g, \"\"));\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      intent: \"budget_analysis\",\n      budget,\n      spent,\n      currency: \"INR\",\n      analysisRequest: message\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        1184
+      ],
+      "id": "cb9dcc9a-7252-4f3d-9998-f66257964b9c",
+      "name": "Prepare Budget Analysis Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.stringify({\n  budget: $json.budget,\n  spent: $json.spent,\n  message: $json.analysisRequest\n}) }}",
+        "options": {
+          "systemMessage": "You are an AI Grocery Spending Analysis Agent.\n\nAnalyze the user's grocery budget and spending information.\n\nCalculate:\n- Total budget\n- Total spent\n- Remaining budget\n- Spending percentage\n- Potential savings\n\nIMPORTANT RULES:\n- Preserve the budget exactly.\n- Use the provided spending amount.\n- Do not invent spending data.\n- If spending data is missing, return 0.\n- Keep all calculations mathematically correct.\n- Use INR.\n- Return ONLY valid JSON.\n\nReturn exactly:\n\n{\n  \"budget\": 0,\n  \"spent\": 0,\n  \"remaining_budget\": 0,\n  \"spending_percentage\": 0,\n  \"potential_savings\": 0,\n  \"status\": \"\",\n  \"advice\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2432,
+        1184
+      ],
+      "id": "7f21a202-0387-4de6-bb82-c34cfd6cd907",
+      "name": "Grocery Spending Analyzer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2304,
+        1392
+      ],
+      "id": "a09e6bc7-48be-4ab7-b891-132703eb4d0c",
+      "name": "OpenAI Chat Model8"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget);\nconst spent = Number(input.spent);\n\nif (\n  !Number.isFinite(budget) ||\n  !Number.isFinite(spent) ||\n  budget <= 0 ||\n  spent < 0\n) {\n  throw new Error(\"Please provide a valid budget and spending amount.\");\n}\n\nconst remainingBudget = budget - spent;\nconst spendingPercentage = Number(\n  ((spent / budget) * 100).toFixed(2)\n);\n\nreturn [{\n  json: {\n    ...input,\n    budget,\n    spent,\n    remainingBudget,\n    spendingPercentage,\n    spendingStatus:\n      remainingBudget < 0\n        ? \"OVER_BUDGET\"\n        : remainingBudget === 0\n          ? \"FULLY_SPENT\"\n          : \"WITHIN_BUDGET\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        1184
+      ],
+      "id": "28afa1f1-f373-4c9d-8bd0-198b315a9cbe",
+      "name": "Parse Spending Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst budget = Number(input.budget || 0);\nconst spent = Number(input.spent || 0);\nconst remaining = Number(\n  input.remainingBudget ?? budget - spent\n);\n\nconst percentage = Number(\n  input.spendingPercentage ??\n  (budget > 0 ? (spent / budget) * 100 : 0)\n);\n\nconst savings = Number(input.potentialSavings || 0);\n\nlet message = `📊 *Grocery Budget Analysis*\\n\\n`;\n\nmessage += `💰 *Total Budget:* ₹${budget.toLocaleString(\"en-IN\")}\\n`;\nmessage += `💸 *Total Spent:* ₹${spent.toLocaleString(\"en-IN\")}\\n`;\nmessage += `💵 *Remaining:* ₹${remaining.toLocaleString(\"en-IN\")}\\n`;\nmessage += `📈 *Spending:* ${percentage.toFixed(2)}%\\n`;\n\nif (savings > 0) {\n  message += `💡 *Potential Savings:* ₹${savings.toLocaleString(\"en-IN\")}\\n`;\n}\n\nif (input.spendingStatus) {\n  message += `\\n📌 *Status:* ${input.spendingStatus}\\n`;\n}\n\nif (input.spendingAdvice) {\n  message += `\\n💡 *Advice:*\\n${input.spendingAdvice}`;\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      telegramMessage: message.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3024,
+        1184
+      ],
+      "id": "eccfca66-2ab8-4504-b0ae-63b0ad3f163c",
+      "name": "Format Budget Analysis Report"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3264,
+        1184
+      ],
+      "id": "a52023ca-879e-4008-9e18-dd8c7e08b3e7",
+      "name": "Send Budget Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nreturn [\n  {\n    json: {\n      intent: \"general_question\",\n      message: input.message || \"\",\n      question: input.message || \"\",\n      currency: \"INR\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        1648
+      ],
+      "id": "7647f5f9-fee7-4ab7-91ab-4d0096046265",
+      "name": "Prepare Budget Analysis Data1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.question }}",
+        "options": {
+          "systemMessage": "You are a helpful General Question Answering AI Agent.\n\nYour task is to answer the user's question clearly, accurately, and concisely.\n\nIMPORTANT RULES:\n- Answer only the user's question.\n- Do not discuss grocery budgets unless the user asks about them.\n- Do not invent facts.\n- If you are unsure about a fact, clearly say that you are unsure.\n- Give a simple explanation when useful.\n- Use plain, easy-to-understand language.\n- Do not return JSON.\n- Return a natural-language answer suitable for sending to the user on Telegram."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2432,
+        1648
+      ],
+      "id": "26a45674-3606-4073-a1d3-565b45103dc8",
+      "name": "General Question Answerer"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        2304,
+        1856
+      ],
+      "id": "ea4a44a1-0603-4b10-9b33-f8053ee45540",
+      "name": "OpenAI Chat Model9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst answer =\n  input.output ||\n  input.text ||\n  input.response ||\n  input.answer ||\n  \"Sorry, I could not generate an answer.\";\n\nreturn [\n  {\n    json: {\n      ...input,\n      telegramMessage: String(answer).trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2800,
+        1648
+      ],
+      "id": "0633df7c-691b-4ec1-a49b-0227852505e4",
+      "name": "Format General Question Response"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.telegramMessage }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3040,
+        1648
+      ],
+      "id": "c3a379f2-fbcd-4e00-9047-2f6ae7453dfe",
+      "name": "Send General Question Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "fd8e7e96-0f00-4a07-997c-2714fa5799be",
+              "leftValue": "={{ $json.message?.voice?.file_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -96,
+        1088
+      ],
+      "id": "e4a8af04-6eb4-4dd0-a542-2fe28ae23d85",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "text": "\"Please send a text or voice message.\"",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        128,
+        1376
+      ],
+      "id": "c9559f17-a916-4dc3-b81b-f0330fd84c3e",
+      "name": "Send a text message"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Text Message Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe audio or video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe audio or video": {
+      "main": [
+        [
+          {
+            "node": "Normalize Voice Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Message Extractor": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Grocery Intent Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Intent Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Intent Parser": {
+      "main": [
+        [
+          {
+            "node": "Parse Grocery Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Grocery Intent": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Prepare Budget Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Grocery Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Price Check Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Budget Analysis Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Budget Analysis Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Grocery Data": {
+      "main": [
+        [
+          {
+            "node": "Build Grocery Item List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Grocery Item List": {
+      "main": [
+        [
+          {
+            "node": "AI Agent – Grocery Price Researcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent – Grocery Price Researcher",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent – Grocery Price Researcher": {
+      "main": [
+        [
+          {
+            "node": "Parse Grocery Price Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Grocery Price Research": {
+      "main": [
+        [
+          {
+            "node": "Calculate Grocery Budget",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Grocery Budget": {
+      "main": [
+        [
+          {
+            "node": "Grocery Budget Optimizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Budget Optimizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Budget Optimizer": {
+      "main": [
+        [
+          {
+            "node": "Parse Optimization Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Optimization Result": {
+      "main": [
+        [
+          {
+            "node": "Budget Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Status": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Grocery Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Budget Recovery Optimizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Budget Recovery Optimizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Grocery Report": {
+      "main": [
+        [
+          {
+            "node": "Final Grocery Advisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Final Grocery Advisor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Grocery Advisor": {
+      "main": [
+        [
+          {
+            "node": "Parse Final Grocery Advisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Final Grocery Advisor": {
+      "main": [
+        [
+          {
+            "node": "Format Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Telegram Response": {
+      "main": [
+        [
+          {
+            "node": "Send Final Grocery Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget Recovery Optimizer": {
+      "main": [
+        [
+          {
+            "node": "Parse Budget Recovery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Budget Recovery Result": {
+      "main": [
+        [
+          {
+            "node": "Format Recovery Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Recovery Report": {
+      "main": [
+        [
+          {
+            "node": "Send Final Grocery Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Voice Text": {
+      "main": [
+        [
+          {
+            "node": "Grocery Intent Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Budget Data": {
+      "main": [
+        [
+          {
+            "node": "Grocery Budget Advisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Budget Advisor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Budget Advisor": {
+      "main": [
+        [
+          {
+            "node": "Parse Grocery Budget Advisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Grocery Budget Advisor": {
+      "main": [
+        [
+          {
+            "node": "Calculate Budget Allocation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Budget Allocation": {
+      "main": [
+        [
+          {
+            "node": "Grocery Budget Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Budget Recommendations",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Budget Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Parse Budget Recommendations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Budget Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Format Budget Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Budget Report": {
+      "main": [
+        [
+          {
+            "node": "Send Budget Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Price Check Data": {
+      "main": [
+        [
+          {
+            "node": "Grocery Price Checker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Price Checker",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Price Checker": {
+      "main": [
+        [
+          {
+            "node": "Parse Price Check Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Price Check Result": {
+      "main": [
+        [
+          {
+            "node": "Format Price Check Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Price Check Response": {
+      "main": [
+        [
+          {
+            "node": "Send Budget Report1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Budget Analysis Data": {
+      "main": [
+        [
+          {
+            "node": "Grocery Spending Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Grocery Spending Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Grocery Spending Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Parse Spending Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Spending Analysis": {
+      "main": [
+        [
+          {
+            "node": "Format Budget Analysis Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Budget Analysis Report": {
+      "main": [
+        [
+          {
+            "node": "Send Budget Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Budget Analysis Data1": {
+      "main": [
+        [
+          {
+            "node": "General Question Answerer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model9": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Question Answerer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Question Answerer": {
+      "main": [
+        [
+          {
+            "node": "Format General Question Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format General Question Response": {
+      "main": [
+        [
+          {
+            "node": "Send General Question Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
