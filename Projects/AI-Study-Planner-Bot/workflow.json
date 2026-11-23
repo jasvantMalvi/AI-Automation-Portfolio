@@ -1,0 +1,283 @@
+{
+  "name": "AI Study Planner Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create a personalized study plan using this information.\n\nStudent Name:\n{{ $json.name }}\n\nSubjects:\n{{ $json.subjects }}\n\nWeak Subject:\n{{ $json.weak_subject }}\n\nGoal:\n{{ $json.goal }}\n\nExam Date:\n{{ $json.exam_date }}\n\nDaily Study Hours:\n{{ $json.daily_study_hours }}\n\nStudy Days:\n{{ $json.study_days }}\n\nPreferred Study Time:\n{{ $json.preferred_study_time }}\n\nCurrent Date:\n{{ $now.format('dd MMMM yyyy') }}\n\nOriginal Message:\n{{ $json.original_message }}",
+        "options": {
+          "systemMessage": "You are an expert AI Study Planner.\n\nCreate a realistic and personalized study plan from the student's information.\n\nRULES:\n\n1. Use the CURRENT DATE to calculate the exact days remaining until the exam.\n2. Never invent the current date or preparation period.\n3. Daily study hours are a HARD LIMIT.\n4. Give extra priority to weak subjects.\n5. Still maintain all other subjects.\n6. Include breaks, revision and practice.\n7. Include mock tests when useful.\n8. Increase revision and testing near the exam.\n9. If information is missing, make a reasonable assumption and clearly mention it.\n10. If the exam date has passed, tell the student to update it.\n\nOUTPUT:\n\n# Personalized Study Plan\n\n## 1. Student Overview\nGive a short table.\n\n## 2. Exam Countdown\nShow days remaining.\n\n## 3. Study Strategy\nExplain how the student should divide their time.\n\n## 4. Daily Schedule\nCreate a simple timetable according to available study hours.\n\n## 5. Weekly Plan\nCreate a Monday-Saturday plan or the student's specified study days.\n\n## 6. Subject Priority\nGive more attention to weak subjects.\n\n## 7. Revision & Practice\nInclude revision, questions and mock tests.\n\n## 8. Final Days Plan\nExplain what to do near the exam.\n\n## 9. Important Tips\nGive 5-7 practical tips.\n\nKeep the answer concise, practical and easy to follow.\nUse Markdown tables where useful.\nDo not write unnecessary motivational content.\nDo not use excessive emojis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        48,
+        -128
+      ],
+      "id": "f96c502b-4122-4ca1-99c6-1f7642438da8",
+      "name": "AI Study Planner"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -400,
+        -128
+      ],
+      "id": "deeaa948-f437-4ab2-bdaf-f4b16885aeb2",
+      "name": "Telegram — Study Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// EXTRACT STUDENT DETAILS FROM TELEGRAM\n// Supports:\n// Name: Arjun\n// Subjects: Physics, Chemistry\n// Weak Subject: Chemistry\n// etc.\n// ============================================\n\nconst message = $json.message?.text || \"\";\nconst telegramUser = $json.message?.from || {};\n\nconst telegramId = telegramUser.id || \"\";\nconst telegramUsername = telegramUser.username || \"\";\nconst telegramFirstName = telegramUser.first_name || \"\";\n\n\n// ============================================\n// GET FIELD VALUE\n// ============================================\n\nfunction getField(label) {\n\n  const regex = new RegExp(\n    \"^\" + label + \"\\\\s*:\\\\s*(.+)$\",\n    \"im\"\n  );\n\n  const match = message.match(regex);\n\n  return match ? match[1].trim() : \"\";\n}\n\n\n// ============================================\n// EXTRACT\n// ============================================\n\nconst name = getField(\"Name\");\n\nconst subjects = getField(\"Subjects\");\n\nconst weakSubject = getField(\"Weak Subject\");\n\nconst goal = getField(\"Goal\");\n\nconst examDate = getField(\"Exam Date\");\n\nconst dailyStudyHours = getField(\"Daily Study Hours\");\n\nconst studyDays = getField(\"Study Days\");\n\nconst preferredStudyTime = getField(\"Preferred Study Time\");\n\n\n// ============================================\n// OUTPUT\n// ============================================\n\nreturn {\n  json: {\n\n    student_id: String(telegramId),\n\n    telegram_id: telegramId,\n\n    telegram_username: telegramUsername,\n\n    telegram_first_name: telegramFirstName,\n\n    name: name || telegramFirstName || \"Student\",\n\n    subjects: subjects || \"Not specified\",\n\n    weak_subject: weakSubject || \"Not specified\",\n\n    goal: goal || \"Not specified\",\n\n    exam_date: examDate || \"Not specified\",\n\n    daily_study_hours: dailyStudyHours || \"Not specified\",\n\n    study_days: studyDays || \"Not specified\",\n\n    preferred_study_time: preferredStudyTime || \"Not specified\",\n\n    original_message: message,\n\n    extracted_at: new Date().toISOString()\n\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -128
+      ],
+      "id": "552819a8-bbda-42ff-af35-e1f60d12a9d2",
+      "name": "Extract Student Details"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// AI STUDY PLAN → SIMPLE HTML\n// ============================================\n\nconst plan =\n  $json.output ||\n  $json.text ||\n  $json.response ||\n  \"\";\n\n\n// Get student data\nconst student = $(\"Extract Student Details\").first().json;\n\nconst name = student.name || \"Student\";\nconst subjects = student.subjects || \"Not specified\";\nconst weakSubject = student.weak_subject || \"Not specified\";\nconst goal = student.goal || \"Not specified\";\nconst examDate = student.exam_date || \"Not specified\";\nconst dailyHours = student.daily_study_hours || \"Not specified\";\nconst studyDays = student.study_days || \"Not specified\";\nconst preferredTime = student.preferred_study_time || \"Not specified\";\n\n\n// ============================================\n// ESCAPE HTML\n// ============================================\n\nfunction escapeHTML(value) {\n  return String(value ?? \"\")\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\n\n// ============================================\n// SIMPLE MARKDOWN → HTML\n// ============================================\n\nfunction markdownToHTML(text) {\n\n  let html = escapeHTML(text);\n\n  // Headings\n  html = html.replace(\n    /^### (.*?)$/gm,\n    \"<h3>$1</h3>\"\n  );\n\n  html = html.replace(\n    /^## (.*?)$/gm,\n    \"<h2>$1</h2>\"\n  );\n\n  html = html.replace(\n    /^# (.*?)$/gm,\n    \"<h1>$1</h1>\"\n  );\n\n  // Bold\n  html = html.replace(\n    /\\*\\*(.*?)\\*\\*/g,\n    \"<strong>$1</strong>\"\n  );\n\n  // Bullet points\n  html = html.replace(\n    /^[•*-] (.*?)$/gm,\n    \"<li>$1</li>\"\n  );\n\n  // Group consecutive li elements\n  html = html.replace(\n    /(<li>.*?<\\/li>\\s*)+/gs,\n    match => `<ul>${match}</ul>`\n  );\n\n  // Numbered lists\n  html = html.replace(\n    /^\\d+\\.\\s+(.*?)$/gm,\n    \"<li>$1</li>\"\n  );\n\n  // Tables\n  const lines = html.split(\"\\n\");\n  const output = [];\n\n  let inTable = false;\n\n  for (let line of lines) {\n\n    const trimmed = line.trim();\n\n    if (trimmed.startsWith(\"|\") && trimmed.endsWith(\"|\")) {\n\n      if (!inTable) {\n        output.push(\"<table>\");\n        inTable = true;\n      }\n\n      // Skip Markdown separator row\n      if (/^\\|[\\s|:-]+\\|$/.test(trimmed)) {\n        continue;\n      }\n\n      const cells = trimmed\n        .slice(1, -1)\n        .split(\"|\")\n        .map(cell => cell.trim());\n\n      const tag =\n        output[output.length - 1] === \"<table>\"\n          ? \"th\"\n          : \"td\";\n\n      output.push(\n        `<tr>${cells.map(c => `<${tag}>${c}</${tag}>`).join(\"\")}</tr>`\n      );\n\n    } else {\n\n      if (inTable) {\n        output.push(\"</table>\");\n        inTable = false;\n      }\n\n      if (trimmed !== \"\") {\n        output.push(trimmed);\n      }\n    }\n  }\n\n  if (inTable) {\n    output.push(\"</table>\");\n  }\n\n  html = output.join(\"\\n\");\n\n  // Paragraph breaks\n  html = html.replace(\n    /\\n{2,}/g,\n    \"</p><p>\"\n  );\n\n  html = `<p>${html}</p>`;\n\n  // Remove paragraph tags around block elements\n  html = html.replace(/<p>(<h[123]>)/g, \"$1\");\n  html = html.replace(/(<\\/h[123]>)<\\/p>/g, \"$1\");\n\n  html = html.replace(/<p>(<ul>)/g, \"$1\");\n  html = html.replace(/(<\\/ul>)<\\/p>/g, \"$1\");\n\n  html = html.replace(/<p>(<table>)/g, \"$1\");\n  html = html.replace(/(<\\/table>)<\\/p>/g, \"$1\");\n\n  return html;\n}\n\n\nconst formattedPlan = markdownToHTML(plan);\n\n\n// ============================================\n// SAFE FILE NAME\n// ============================================\n\nconst safeName = name\n  .replace(/[^a-zA-Z0-9-_ ]/g, \"\")\n  .trim()\n  .replace(/\\s+/g, \"_\");\n\n\n// ============================================\n// FINAL HTML\n// ============================================\n\nconst html = `\n<!DOCTYPE html>\n\n<html>\n<head>\n\n<meta charset=\"UTF-8\">\n\n<meta name=\"viewport\"\ncontent=\"width=device-width, initial-scale=1.0\">\n\n<title>AI Study Plan - ${escapeHTML(name)}</title>\n\n<style>\n\n* {\n  box-sizing: border-box;\n}\n\nbody {\n  margin: 0;\n  padding: 30px 15px;\n  background: #f1f5f9;\n  font-family: Arial, sans-serif;\n  color: #1e293b;\n  line-height: 1.6;\n}\n\n.container {\n  max-width: 900px;\n  margin: auto;\n  background: white;\n  border-radius: 18px;\n  overflow: hidden;\n  box-shadow: 0 10px 30px rgba(0,0,0,.10);\n}\n\n.header {\n  padding: 40px;\n  background: linear-gradient(\n    135deg,\n    #312e81,\n    #4f46e5\n  );\n  color: white;\n}\n\n.header h1 {\n  margin: 0;\n  font-size: 32px;\n}\n\n.header p {\n  margin: 8px 0 0;\n  opacity: .9;\n}\n\n.info {\n  padding: 25px;\n  background: #f8fafc;\n}\n\n.grid {\n  display: grid;\n  grid-template-columns: repeat(2, 1fr);\n  gap: 12px;\n}\n\n.card {\n  padding: 14px;\n  background: white;\n  border: 1px solid #e2e8f0;\n  border-radius: 10px;\n}\n\n.label {\n  font-size: 10px;\n  color: #64748b;\n  text-transform: uppercase;\n  font-weight: bold;\n}\n\n.value {\n  margin-top: 4px;\n  font-weight: bold;\n}\n\n.content {\n  padding: 30px 40px;\n}\n\nh1 {\n  color: #312e81;\n}\n\nh2 {\n  margin-top: 28px;\n  padding: 10px 14px;\n  background: #eef2ff;\n  border-left: 4px solid #4f46e5;\n  border-radius: 6px;\n  color: #312e81;\n}\n\nh3 {\n  color: #4338ca;\n}\n\np {\n  margin: 10px 0;\n}\n\nul {\n  padding-left: 25px;\n}\n\nli {\n  margin: 6px 0;\n}\n\ntable {\n  width: 100%;\n  border-collapse: collapse;\n  margin: 18px 0;\n  font-size: 13px;\n}\n\nth {\n  background: #312e81;\n  color: white;\n  padding: 10px;\n  text-align: left;\n}\n\ntd {\n  padding: 10px;\n  border: 1px solid #e2e8f0;\n  vertical-align: top;\n}\n\ntr:nth-child(even) {\n  background: #f8fafc;\n}\n\n.footer {\n  padding: 18px;\n  text-align: center;\n  background: #f8fafc;\n  color: #64748b;\n  font-size: 11px;\n}\n\n@media(max-width:650px) {\n\n  body {\n    padding: 0;\n  }\n\n  .container {\n    border-radius: 0;\n  }\n\n  .header {\n    padding: 28px 22px;\n  }\n\n  .header h1 {\n    font-size: 26px;\n  }\n\n  .content {\n    padding: 25px 20px;\n  }\n\n  .grid {\n    grid-template-columns: 1fr;\n  }\n\n  table {\n    font-size: 12px;\n  }\n}\n\n</style>\n\n</head>\n\n<body>\n\n<div class=\"container\">\n\n  <div class=\"header\">\n\n    <h1>📚 AI Study Planner</h1>\n\n    <p>\n      Personalized study plan for\n      <strong>${escapeHTML(name)}</strong>\n    </p>\n\n  </div>\n\n\n  <div class=\"info\">\n\n    <div class=\"grid\">\n\n      <div class=\"card\">\n        <div class=\"label\">Student</div>\n        <div class=\"value\">\n          ${escapeHTML(name)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Exam Date</div>\n        <div class=\"value\">\n          ${escapeHTML(examDate)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Goal</div>\n        <div class=\"value\">\n          ${escapeHTML(goal)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Daily Hours</div>\n        <div class=\"value\">\n          ${escapeHTML(dailyHours)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Subjects</div>\n        <div class=\"value\">\n          ${escapeHTML(subjects)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Weak Subject</div>\n        <div class=\"value\">\n          ${escapeHTML(weakSubject)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Study Days</div>\n        <div class=\"value\">\n          ${escapeHTML(studyDays)}\n        </div>\n      </div>\n\n      <div class=\"card\">\n        <div class=\"label\">Preferred Time</div>\n        <div class=\"value\">\n          ${escapeHTML(preferredTime)}\n        </div>\n      </div>\n\n    </div>\n\n  </div>\n\n\n  <div class=\"content\">\n\n    ${formattedPlan}\n\n  </div>\n\n\n  <div class=\"footer\">\n\n    <strong>AI Study Planner</strong>\n    <br>\n    Personalized • Practical • Actionable\n\n  </div>\n\n</div>\n\n</body>\n</html>\n`;\n\n\n// ============================================\n// OUTPUT\n// ============================================\n\nreturn {\n  json: {\n    name,\n    exam_date: examDate,\n    goal,\n    html,\n    filename:\n      `AI_Study_Plan_${safeName || \"Student\"}.html`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -128
+      ],
+      "id": "8c725fb7-4cdc-49d7-bf38-2631ead124ae",
+      "name": "Build Study Plan HTML"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "html",
+        "options": {
+          "fileName": "={{ $json.filename }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        -128
+      ],
+      "id": "12b3b36e-ba0e-4f85-82e8-5f3513dec203",
+      "name": "Create Study Plan File"
+    },
+    {
+      "parameters": {
+        "operation": "sendDocument",
+        "chatId": "={{ $('Telegram — Study Request').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        -128
+      ],
+      "id": "a317789a-78a4-4c32-b0d6-5724c30e31da",
+      "name": "Send Study Plan to Telegram"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-5",
+          "cachedResultName": "Claude Sonnet 5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        16,
+        48
+      ],
+      "id": "f3871121-4788-4c84-96cb-c9c9ed77b0c4",
+      "name": "Claude — Study Planning Model"
+    },
+    {
+      "parameters": {
+        "content": "📩 SECTION 1 — STUDENT INPUT\n\nReceive the student's study-planning request through Telegram.",
+        "height": 288,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -240
+      ],
+      "id": "2a6b2e42-5c2d-46fc-a128-c650181a39b3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "🧹 SECTION 2 — DATA EXTRACTION\n\nExtract and structure student details from the Telegram message.",
+        "height": 288,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -240
+      ],
+      "id": "4b445676-802a-41dd-a37a-7cae9f450094",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "🤖 SECTION 3 — AI STUDY PLANNING\n\nClaude analyzes the student's details and creates a personalized study plan.",
+        "height": 416,
+        "width": 352,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -240
+      ],
+      "id": "4c84388e-cf6e-4e57-bc02-24736a166cf6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "🎨 SECTION 4 — STUDY PLAN DESIGN\n\nConvert the AI study plan into a clean, attractive HTML document.",
+        "height": 288,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        -240
+      ],
+      "id": "77eb35e8-044e-4f9a-9a44-c1cd07a2fb51",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "🎨 SECTION 4 — STUDY PLAN DESIGN\n\nConvert the AI study plan into a clean, attractive HTML document.",
+        "height": 288,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        608,
+        -240
+      ],
+      "id": "5b75b382-b2d0-4beb-9f8a-f9eea9026bc7",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "📤 SECTION 6 — TELEGRAM DELIVERY\n\nSend the completed personalized study plan back to the student on Telegram.",
+        "height": 288,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -240
+      ],
+      "id": "8af2b0c6-e023-484a-b2e5-66f62677c3d4",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Study Planner": {
+      "main": [
+        [
+          {
+            "node": "Build Study Plan HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram — Study Request": {
+      "main": [
+        [
+          {
+            "node": "Extract Student Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Student Details": {
+      "main": [
+        [
+          {
+            "node": "AI Study Planner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Study Plan HTML": {
+      "main": [
+        [
+          {
+            "node": "Create Study Plan File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Study Plan File": {
+      "main": [
+        [
+          {
+            "node": "Send Study Plan to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude — Study Planning Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Study Planner",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
