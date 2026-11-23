@@ -1,0 +1,806 @@
+{
+  "name": "Lead Followup Automation Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        16
+      ],
+      "id": "e82d95e8-446d-43dd-810c-203adaea009b",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1557d468-2898-42fa-b4f6-274f0fcccfd2",
+              "name": "userName",
+              "value": "={{ $json.contacts[0].profile.name }}",
+              "type": "string"
+            },
+            {
+              "id": "6767891e-f401-4f41-ab6a-13042a40c129",
+              "name": "userMessage",
+              "value": "={{ $json.messages[0].text.body.toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "62a47148-b7d6-4c27-b198-0efe67304107",
+              "name": "userMessageOriginal",
+              "value": "={{ $json.messages[0].text.body.trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "325f1d51-7c7f-4476-8186-2e3ea0834fd1",
+              "name": "userPhonenumber",
+              "value": "={{ $json.contacts[0].wa_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        128,
+        16
+      ],
+      "id": "32d0bf2d-7698-49bf-a018-9ef5536243e1",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7eb80ebe-79cc-46b8-a21b-f7df08fd5d85",
+              "leftValue": "={{ $json.is_existing_lead }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        720,
+        16
+      ],
+      "id": "6b0f6406-847f-46d0-8a38-e0a5331f3e45",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Edit Fields').item.json.userPhonenumber }}",
+        "textBody": "=👋 Welcome, {{ $('Edit Fields').item.json.userName }}\n\nThanks for reaching out. We'd be happy to help you choose the right course.\n\n📚 Our Courses:\n\n1️⃣ AI Automation & AI Agents\n2️⃣ Machine Learning\n3️⃣ Data Science\n4️⃣ Python Programming\n5️⃣ Web Development\n6️⃣ Digital Marketing\n\n👉 Reply with the course name or number you're interested in, and we'll share the details.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1232,
+        208
+      ],
+      "id": "c38e1e0a-d914-491e-9a01-8599d2d17ba6",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Original WhatsApp data\nconst editData = $('Edit Fields').first().json;\n\n// Existing Google Sheets row\nconst sheetData = $input.first()?.json || {};\n\n// Incoming message\nconst userName = editData.userName || '';\nconst phone = editData.userPhonenumber || '';\nconst message = editData.userMessageOriginal || '';\nconst cleanMessage = editData.userMessage || '';\n\n// Check whether this lead already exists\nconst existingPhone = String(sheetData.phone || '').trim();\n\nconst isExistingLead =\n  existingPhone !== '' &&\n  existingPhone === String(phone).trim();\n\n// Previous follow-up count\nconst previousCount = parseInt(\n  sheetData.follow_up_count || 0,\n  10\n);\n\n// Increase count\nconst followUpCount = previousCount + 1;\n\n// WhatsApp message ID\nconst triggerData = $('WhatsApp Trigger').first().json;\nconst whatsappMessage = triggerData.messages?.[0];\n\nconst messageId = whatsappMessage?.id || '';\n\n// WhatsApp timestamp\nconst timestamp = whatsappMessage?.timestamp\n  ? Number(whatsappMessage.timestamp) * 1000\n  : Date.now();\n\n// India date/time\nconst lastFollowUp = new Date(timestamp).toLocaleString('en-IN', {\n  timeZone: 'Asia/Kolkata',\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric',\n  hour: '2-digit',\n  minute: '2-digit',\n  second: '2-digit',\n  hour12: true\n});\n\n// Tomorrow's date\nconst indiaNow = new Date(\n  new Date().toLocaleString('en-US', {\n    timeZone: 'Asia/Kolkata'\n  })\n);\n\nindiaNow.setDate(indiaNow.getDate() + 1);\n\nconst nextFollowUp = indiaNow.toLocaleDateString('en-IN', {\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric'\n});\n\n// Detect greeting\nconst greetings = [\n  'hi',\n  'hello',\n  'hey',\n  'hii',\n  'hola',\n  'good morning',\n  'good afternoon',\n  'good evening'\n];\n\nconst isGreeting = greetings.includes(cleanMessage);\n\n// Detect course\nlet interestedCourse = sheetData.interested_course || '';\n\nif (\n  cleanMessage.includes('ai automation') ||\n  cleanMessage.includes('ai agent') ||\n  cleanMessage === '1'\n) {\n  interestedCourse = 'AI Automation & AI Agents';\n}\n\nelse if (\n  cleanMessage.includes('machine learning') ||\n  cleanMessage === '2'\n) {\n  interestedCourse = 'Machine Learning';\n}\n\nelse if (\n  cleanMessage.includes('data science') ||\n  cleanMessage === '3'\n) {\n  interestedCourse = 'Data Science';\n}\n\nelse if (\n  cleanMessage.includes('python') ||\n  cleanMessage === '4'\n) {\n  interestedCourse = 'Python Programming';\n}\n\nelse if (\n  cleanMessage.includes('web development') ||\n  cleanMessage === '5'\n) {\n  interestedCourse = 'Web Development';\n}\n\nelse if (\n  cleanMessage.includes('digital marketing') ||\n  cleanMessage === '6'\n) {\n  interestedCourse = 'Digital Marketing';\n}\n\n// Lead status\nlet leadStatus;\nlet followUpStatus;\n\nif (!isExistingLead) {\n  leadStatus = 'New';\n  followUpStatus = 'Pending';\n}\nelse if (interestedCourse) {\n  leadStatus = 'Active';\n  followUpStatus = 'Pending';\n}\nelse {\n  leadStatus = sheetData.lead_status || 'Active';\n  followUpStatus = 'Pending';\n}\n\n// Return data matching your Google Sheet\nreturn [\n  {\n    json: {\n      lead_name: userName || sheetData.lead_name || '',\n      phone: phone,\n      message_id: messageId,\n      lead_source: 'WhatsApp',\n\n      lead_status: leadStatus,\n\n      interested_course: interestedCourse,\n\n      follow_up_status: followUpStatus,\n\n      last_follow_up: lastFollowUp,\n\n      next_follow_up: nextFollowUp,\n\n      follow_up_count: followUpCount,\n\n      // Internal fields for workflow logic\n      is_existing_lead: isExistingLead,\n      is_greeting: isGreeting,\n      clean_message: cleanMessage,\n      original_message: message\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        16
+      ],
+      "id": "80e571c2-f0d9-439a-bf19-219bca2239ea",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Edit Fields').item.json.userPhonenumber }}",
+        "textBody": "=🎯 Great choice! {{ $('Edit Fields').item.json.userName }}\n\nThanks for your interest in {{ $('Code in JavaScript').item.json.interested_course }}\n\nWe can share the complete details, including: \n📚 Course syllabus\n⏳ Duration \n💰 Fees\n💻 Learning format \n🎓 Certification \n💼 Career opportunities \n\nWould you like me to send you the complete course details? \n\nReply with:\n1️⃣ Yes\n2️⃣ No\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        -48
+      ],
+      "id": "bf3723e6-426c-4b14-9d47-2e1548cdd74b",
+      "name": "Send message1",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Lead Follow-up Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "phone",
+              "lookupValue": "={{ $json.userPhonenumber }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        320,
+        16
+      ],
+      "id": "2c955e6d-91b7-4dc1-af91-5505ecd78724",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Lead Follow-up Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_name": "={{ $json.lead_name }}",
+            "phone": "={{ $json.phone }}",
+            "message_id": "={{ $json.message_id }}",
+            "lead_source": "={{ $json.lead_source }}",
+            "lead_status": "={{ $json.lead_status }}",
+            "follow_up_status": "={{ $json.follow_up_status }}",
+            "last_follow_up": "={{ $json.last_follow_up }}",
+            "next_follow_up": "={{ $json.next_follow_up }}",
+            "follow_up_count": "={{ $json.follow_up_count }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_name",
+              "displayName": "lead_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_source",
+              "displayName": "lead_source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_status",
+              "displayName": "lead_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "interested_course",
+              "displayName": "interested_course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_status",
+              "displayName": "follow_up_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_follow_up",
+              "displayName": "last_follow_up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_follow_up",
+              "displayName": "next_follow_up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_count",
+              "displayName": "follow_up_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        992,
+        208
+      ],
+      "id": "ca03c41f-c3e0-4064-b08d-2a81c2997823",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Lead Follow-up Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_name": "={{ $json.lead_name }}",
+            "phone": "={{ $json.phone }}",
+            "message_id": "={{ $json.message_id }}",
+            "lead_source": "={{ $json.lead_source }}",
+            "lead_status": "={{ $json.lead_status }}",
+            "interested_course": "={{ $json.interested_course }}",
+            "follow_up_status": "Done",
+            "last_follow_up": "={{ $json.last_follow_up }}",
+            "next_follow_up": "={{ $json.next_follow_up }}",
+            "follow_up_count": "={{ $json.follow_up_count }}"
+          },
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "id": "lead_name",
+              "displayName": "lead_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_source",
+              "displayName": "lead_source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_status",
+              "displayName": "lead_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "interested_course",
+              "displayName": "interested_course",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_status",
+              "displayName": "follow_up_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_follow_up",
+              "displayName": "last_follow_up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_follow_up",
+              "displayName": "next_follow_up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "follow_up_count",
+              "displayName": "follow_up_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "e55ece2e-03f7-4362-aa4d-acd1862096f8",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "content": "Receives incoming WhatsApp messages from leads.",
+        "height": 80,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -96
+      ],
+      "id": "683409e1-f8ac-448d-8ec9-69be08679444",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Extracts and cleans the lead name, phone number, and message.",
+        "height": 80,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -96
+      ],
+      "id": "395948ff-9990-482d-a7b3-38f25fdd61a0",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Checks Google Sheets to find an existing lead using the phone number.",
+        "height": 112,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        272,
+        176
+      ],
+      "id": "5434e7c1-00c6-4a4c-bea4-61223503015a",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Identifies the lead, tracks follow-ups, detects courses, and calculates dates.",
+        "height": 112,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        176
+      ],
+      "id": "c12a9c83-4073-4c5e-bc93-df7d3b50be75",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Checks whether the lead already exists before choosing Append or Update.",
+        "height": 112,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -112
+      ],
+      "id": "d6f9a6aa-c475-414c-928f-d167f2629f62",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Creates a new lead record in Google Sheets.",
+        "height": 80,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        368
+      ],
+      "id": "b5618c00-70fb-46d2-9d79-3a5ac65b5f42",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Updates the existing lead with the latest interaction and follow-up data.",
+        "height": 112,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        944,
+        -288
+      ],
+      "id": "125ef7a4-d870-44f1-9985-8100339812d0",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Sends a welcome message and course list to a new lead.",
+        "height": 80,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        368
+      ],
+      "id": "414751cc-3f7f-4cbb-8d02-55a33b95edfb",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Welcomes the lead and presents the available course options.",
+        "height": 96,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        -384
+      ],
+      "id": "3a4e084f-443e-4dee-9bb3-2b0c5b36e1fb",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9dc1f477-5914-4d3f-a4aa-2e65faca1a71",
+              "leftValue": "={{ $('Code in JavaScript').item.json.is_greeting }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1216,
+        -160
+      ],
+      "id": "95a4807d-2f31-4576-893a-0fec60b154f8",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('Edit Fields').item.json.userPhonenumber }}",
+        "textBody": "=👋 Welcome, {{ $('Edit Fields').item.json.userName }}\n\nThanks for reaching out. We'd be happy to help you choose the right course.\n\n📚 Our Courses:\n\n1️⃣ AI Automation & AI Agents\n2️⃣ Machine Learning\n3️⃣ Data Science\n4️⃣ Python Programming\n5️⃣ Web Development\n6️⃣ Digital Marketing\n\n👉 Reply with the course name or number you're interested in, and we'll share the details.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        -272
+      ],
+      "id": "af45ffea-2000-479a-8eaf-74a8655762cb",
+      "name": "Send message2"
+    },
+    {
+      "parameters": {
+        "content": "Determines whether the incoming message is a greeting or course inquiry.",
+        "height": 112,
+        "width": 208,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        -288
+      ],
+      "id": "ea1644f7-bb4f-4b2a-b15a-1125cb377279",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "Acknowledges course interest and offers detailed course information.",
+        "height": 112,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        112
+      ],
+      "id": "7fbca857-d191-4723-b5c3-68f0c8739751",
+      "name": "Sticky Note10"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
