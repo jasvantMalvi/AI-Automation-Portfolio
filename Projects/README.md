@@ -49,6 +49,8 @@ Detailed project documentation will be added progressively.
 
 26. [Meeting Scheduler Automation](./Meeting-Scheduler-Automation/) — Automates meeting requests submitted through Google Forms. Parses meeting details, checks Google Calendar availability, creates events for available slots, updates request status in Google Sheets, and sends confirmation or rejection emails using n8n and Gmail.
 
+27. [AI Email Generation Bot](./AI-Email-Generation-Bot/) — Generates professional email subjects and body content from an n8n form using an OpenAI-powered AI Agent. Stores generated emails and request details in Google Sheets, then sends the formatted email through Gmail.
+
 ## Technologies Used
 
 - n8n
