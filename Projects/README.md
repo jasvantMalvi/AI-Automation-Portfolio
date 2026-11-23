@@ -65,6 +65,8 @@ Detailed project documentation will be added progressively.
 
 34. [Automated Course Feedback Collector Bot](./Automated-Course-Feedback-Collector-Bot/) — Collects course feedback through Telegram text and voice messages, transcribes voice with ElevenLabs, analyzes sentiment, topics, suggestions, and priority using GPT-5 Mini, checks duplicate feedback, and records results in Google Sheets. Sends student text/audio acknowledgements and admin alerts through Telegram and Gmail. The README documents outstanding issues including the admin Telegram destination, empty Sheets append mapping, duplicate-row matching, and disconnected validation routes.
 
+35. [Automated Certificate Delivery Agent](./Automated-Certificate-Delivery-Agent/) — Manually processes pending recipient records from Google Sheets, copies a Google Docs certificate template, replaces recipient/course placeholders, shares the generated certificate with the recipient, updates the delivery record, and sends a personalized HTML Gmail message. The README documents the recipient-email field mismatch, premature `Sent` status update, missing error handling, and retry-related duplicate risks.
+
 ## Technologies Used
 
 - n8n
