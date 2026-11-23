@@ -113,7 +113,7 @@ The rejection email includes the requested date, requested time, and meeting tit
 
 ### 4. Google Forms Response Sheet
 
-![Meeting Scheduler Response Sheet](./screenshots/form-responses-sheet.png)
+![Meeting Scheduler Response Sheet](./screenshots/meeting-unavailable-email.png)
 
 ### 5. Meeting Confirmation Email
 
@@ -121,7 +121,7 @@ The rejection email includes the requested date, requested time, and meeting tit
 
 ### 6. Unavailable Slot Email
 
-![Meeting Unavailable Email](./screenshots/meeting-unavailable-email.png)
+![Meeting Unavailable Email](./screenshots/form-responses-sheet.png)
 
 Public screenshot copies have been blurred to hide requester names, email addresses, and other personal contact details.
 
