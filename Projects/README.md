@@ -71,6 +71,8 @@ Detailed project documentation will be added progressively.
 
 37. [AI YouTube Shorts Generator Bot](./AI-YouTube-Shorts-Generator-Bot/) — Fetches AI and technology articles from TechCrunch RSS, aggregates the feed items, generates one 30–60 second YouTube Shorts script per article with GPT-5 Mini, validates the structured JSON output, and saves titles, hooks, scripts, endings, hashtags, and source metadata to Google Sheets. This project generates script drafts only; it does not render or publish videos. The README documents the single-source, no-deduplication, and unrelated trailing HTTP Request limitations.
 
+38. [AI Voice Telegram Assistant](./AI-Voice-Telegram-Assistant/) — Receives Telegram voice messages, downloads and transcribes audio with ElevenLabs Speech-to-Text, generates context-aware responses using GPT-5 Mini and an n8n Conversation Memory node, converts responses into speech with ElevenLabs Text-to-Speech, and sends audio replies back to Telegram. Supports English, Hindi, Gujarati, and mixed-language responses through its AI prompt. The README documents the unstable memory session key and missing voice-message validation and error handling.
+
 ## Technologies Used
 
 - n8n
