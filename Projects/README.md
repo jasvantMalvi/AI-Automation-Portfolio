@@ -47,6 +47,8 @@ Detailed project documentation will be added progressively.
 
 25. [Smart Expense Tracking Bot](./Smart-Expense-Tracking-Bot/) — Logs WhatsApp expense messages using n8n, JavaScript, and Google Sheets. Extracts transaction amounts, currency, category, merchant, and payment method, then calculates and sends an expense summary through WhatsApp.
 
+26. [Meeting Scheduler Automation](./Meeting-Scheduler-Automation/) — Automates meeting requests submitted through Google Forms. Parses meeting details, checks Google Calendar availability, creates events for available slots, updates request status in Google Sheets, and sends confirmation or rejection emails using n8n and Gmail.
+
 ## Technologies Used
 
 - n8n
