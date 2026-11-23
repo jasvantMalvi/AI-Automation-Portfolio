@@ -1,0 +1,654 @@
+{
+  "name": "Meeting Scheduler Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Meeting Scheduler Responses Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 926898869,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -96
+      ],
+      "id": "18a321cb-1c29-4f51-b416-40772e10d455",
+      "name": "Google Sheets Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =========================================\n// Professional Meeting Scheduler Parser\n// Processes ONLY the latest submitted row\n// =========================================\n\nconst TIMEZONE = \"Asia/Kolkata\";\n\n// Always take the latest row\nconst item = $input.last().json;\n\n// -----------------------------\n// Extract Fields\n// -----------------------------\nconst meetingTitle = item[\"Meeting Title\"] || \"Meeting\";\nconst meetingPurpose = item[\"Meeting Purpose\"] || \"\";\nconst fullName = item[\"Full Name\"] || \"\";\nconst email = item[\"Email ID\"] || \"\";\n\nconst preferredDate = item[\"Preferred Date\"];\nconst preferredTime = item[\"Preferred Time\"];\nconst durationText = item[\"Duration\"] || \"30 Minutes\";\n\n// -----------------------------\n// Parse Duration\n// -----------------------------\nconst durationMatch = durationText.match(/\\d+/);\nconst durationMinutes = durationMatch\n    ? parseInt(durationMatch[0], 10)\n    : 30;\n\n// -----------------------------\n// Parse Date\n// -----------------------------\nconst [month, day, year] = preferredDate\n    .split(\"/\")\n    .map(Number);\n\n// -----------------------------\n// Parse Time\n// -----------------------------\nconst timeMatch = preferredTime.match(\n    /(\\d+):(\\d+):(\\d+)\\s*(AM|PM)/i\n);\n\nif (!timeMatch) {\n    throw new Error(`Invalid Preferred Time: ${preferredTime}`);\n}\n\nlet hour = parseInt(timeMatch[1], 10);\nconst minute = parseInt(timeMatch[2], 10);\nconst second = parseInt(timeMatch[3], 10);\nconst meridian = timeMatch[4].toUpperCase();\n\nif (meridian === \"PM\" && hour !== 12) hour += 12;\nif (meridian === \"AM\" && hour === 12) hour = 0;\n\n// -----------------------------\n// Create Start & End Date\n// -----------------------------\nconst startDate = new Date(\n    year,\n    month - 1,\n    day,\n    hour,\n    minute,\n    second\n);\n\nconst endDate = new Date(startDate);\nendDate.setMinutes(endDate.getMinutes() + durationMinutes);\n\n// -----------------------------\n// ISO Format\n// -----------------------------\nconst startISO = startDate.toISOString();\nconst endISO = endDate.toISOString();\n\n// -----------------------------\n// Human Readable\n// -----------------------------\nconst readableStart = startDate.toLocaleString(\"en-IN\", {\n    timeZone: TIMEZONE,\n    weekday: \"long\",\n    day: \"numeric\",\n    month: \"long\",\n    year: \"numeric\",\n    hour: \"numeric\",\n    minute: \"2-digit\",\n    hour12: true,\n});\n\nconst readableEnd = endDate.toLocaleString(\"en-IN\", {\n    timeZone: TIMEZONE,\n    hour: \"numeric\",\n    minute: \"2-digit\",\n    hour12: true,\n});\n\n// -----------------------------\n// Return\n// -----------------------------\nreturn [\n{\n    json: {\n\n        meetingTitle,\n        meetingPurpose,\n\n        fullName,\n        email,\n\n        timezone: TIMEZONE,\n\n        durationMinutes,\n\n        preferredDate,\n        preferredTime,\n\n        startTime: readableStart,\n        endTime: readableEnd,\n\n        startISO,\n        endISO,\n\n        calendarCheck: {\n            timeMin: startISO,\n            timeMax: endISO,\n        },\n\n        calendarEvent: {\n            summary: meetingTitle,\n            description: meetingPurpose,\n\n            start: {\n                dateTime: startISO,\n                timeZone: TIMEZONE,\n            },\n\n            end: {\n                dateTime: endISO,\n                timeZone: TIMEZONE,\n            },\n\n            attendees: [\n                {\n                    email,\n                    displayName: fullName,\n                }\n            ]\n        }\n\n    }\n}\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        -96
+      ],
+      "id": "f738f18d-3d61-4f33-85b7-c53c87a9c0e5",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Your Google Calendar"
+        },
+        "timeMin": "={{ $json.calendarEvent.start.dateTime }}",
+        "timeMax": "={{ $json.calendarEvent.end.dateTime }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        -96
+      ],
+      "id": "22ed005b-d27a-41fb-b835-dc85b9d8e676",
+      "name": "Get availability in a calendar"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7585901f-f657-406a-8d9b-e5867ec7add5",
+              "leftValue": "={{ $json.available }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        352,
+        -96
+      ],
+      "id": "af3f5280-09e9-4e66-b914-9d0185767459",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "Your Google Calendar"
+        },
+        "start": "={{ $('Code in JavaScript').item.json.startISO }}",
+        "end": "={{ $('Code in JavaScript').item.json.endISO }}",
+        "additionalFields": {
+          "attendees": []
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        -240
+      ],
+      "id": "efc81bb6-d201-4a6d-b247-328a1eac2b93",
+      "name": "Create an event"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Meeting Scheduler Responses Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 926898869,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email ID": "={{ $('Code in JavaScript').item.json.email }}",
+            "Full Name": "={{ $('Code in JavaScript').item.json.fullName }}",
+            "Meeting Title": "={{ $('Code in JavaScript').item.json.meetingTitle }}",
+            "Meeting Purpose": "={{ $('Code in JavaScript').item.json.meetingPurpose }}",
+            "Preferred Date": "={{ $('Code in JavaScript').item.json.preferredDate }}",
+            "Preferred Time": "={{ $('Code in JavaScript').item.json.preferredTime }}",
+            "Status": "Scheduled"
+          },
+          "matchingColumns": [
+            "Email ID"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meeting Title",
+              "displayName": "Meeting Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Purpose",
+              "displayName": "Meeting Purpose",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferred Date",
+              "displayName": "Preferred Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Duration ",
+              "displayName": "Duration ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        -240
+      ],
+      "id": "b5d30413-4004-4289-9e7e-62b4b55a7a46",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Meeting Scheduler Responses Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 926898869,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email ID": "={{ $('Code in JavaScript').item.json.email }}",
+            "Full Name": "={{ $('Code in JavaScript').item.json.fullName }}",
+            "Meeting Title": "={{ $('Code in JavaScript').item.json.meetingTitle }}",
+            "Meeting Purpose": "={{ $('Code in JavaScript').item.json.meetingPurpose }}",
+            "Preferred Date": "={{ $('Code in JavaScript').item.json.preferredDate }}",
+            "Preferred Time": "={{ $('Code in JavaScript').item.json.preferredTime }}",
+            "Status": "Rejected"
+          },
+          "matchingColumns": [
+            "Email ID"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email ID",
+              "displayName": "Email ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Meeting Title",
+              "displayName": "Meeting Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Purpose",
+              "displayName": "Meeting Purpose",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferred Date",
+              "displayName": "Preferred Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preferred Time",
+              "displayName": "Preferred Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Duration ",
+              "displayName": "Duration ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        32
+      ],
+      "id": "8d1bc84f-7ada-4a66-94d9-a03f7281e79f",
+      "name": "Update row in sheet1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code in JavaScript').item.json.email }}",
+        "subject": "=❌ Meeting Request Update | Requested Time Unavailable",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n</head>\n\n<body style=\"margin:0;background:#f5f7fa;font-family:Arial,Helvetica,sans-serif;\">\n\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:40px 0;\">\n<tr>\n<td align=\"center\">\n\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08);\">\n\n<tr>\n<td style=\"background:#dc2626;padding:25px;text-align:center;\">\n<h2 style=\"color:#ffffff;margin:0;\">Meeting Request Update</h2>\n</td>\n</tr>\n\n<tr>\n<td style=\"padding:35px;color:#333;\">\n\n<p>Hi <strong>{{ $('Code in JavaScript').item.json.fullName }}</strong>,</p>\n\n<p>\nThank you for your meeting request.\n</p>\n\n<p>\nUnfortunately, the requested time slot is no longer available due to an existing booking.\n</p>\n\n<table cellpadding=\"8\" cellspacing=\"0\" width=\"100%\" style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;\">\n\n<tr>\n<td width=\"35%\"><strong>Requested Date</strong></td>\n<td>{{ $('Code in JavaScript').item.json.preferredDate }}</td>\n</tr>\n\n<tr>\n<td><strong>Requested Time</strong></td>\n<td>{{ $('Code in JavaScript').item.json.preferredTime }}</td>\n</tr>\n\n<tr>\n<td><strong>Meeting</strong></td>\n<td>{{ $('Code in JavaScript').item.json.meetingTitle }}</td>\n</tr>\n\n</table>\n\n<p style=\"margin-top:25px;\">\nPlease submit another meeting request with a different date or time, and we'll be happy to schedule it for you.\n</p>\n\n<p>Thank you for your understanding.</p>\n\n<br>\n\n<p>\nBest Regards,<br>\n<strong>AI Meeting Scheduler</strong>\n</p>\n\n</td>\n</tr>\n\n</table>\n\n</td>\n</tr>\n</table>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        32
+      ],
+      "id": "10b0e111-aac4-4718-a809-0c7a09c1fcc6",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Code in JavaScript').item.json.email }}",
+        "subject": "=✅ Meeting Confirmed | AI Meeting | {{ $json['Preferred Date'] }}",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n</head>\n\n<body style=\"margin:0;background:#f5f7fa;font-family:Arial,Helvetica,sans-serif;\">\n\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:40px 0;\">\n<tr>\n<td align=\"center\">\n\n<table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08);\">\n\n<tr>\n<td style=\"background:#2563eb;padding:25px;text-align:center;\">\n<h2 style=\"color:#ffffff;margin:0;\">Meeting Confirmed</h2>\n</td>\n</tr>\n\n<tr>\n<td style=\"padding:35px;color:#333;\">\n\n<p>Hi <strong>{{ $('Code in JavaScript').item.json.fullName }}</strong>,</p>\n\n<p>Your meeting has been successfully scheduled.</p>\n\n<table cellpadding=\"8\" cellspacing=\"0\" width=\"100%\" style=\"background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;\">\n\n<tr>\n<td width=\"35%\"><strong>Meeting</strong></td>\n<td>{{ $('Code in JavaScript').item.json.meetingTitle }}</td>\n</tr>\n\n<tr>\n<td><strong>Date</strong></td>\n<td>{{ $('Code in JavaScript').item.json.preferredDate }}</td>\n</tr>\n\n<tr>\n<td><strong>Time</strong></td>\n<td>{{ $('Code in JavaScript').item.json.preferredTime }}</td>\n</tr>\n\n<tr>\n<td><strong>Duration</strong></td>\n<td>{{ $('Code in JavaScript').item.json.durationMinutes }} Minutes</td>\n</tr>\n\n<tr>\n<td><strong>Purpose</strong></td>\n<td>{{ $('Code in JavaScript').item.json.meetingPurpose }}</td>\n</tr>\n\n</table>\n\n<p style=\"margin-top:30px;\">\nPlease join the meeting on time. If you need to reschedule, kindly contact us in advance.\n</p>\n\n<p>We look forward to speaking with you.</p>\n\n<br>\n\n<p>\nBest Regards,<br>\n<strong>AI Meeting Scheduler</strong>\n</p>\n\n</td>\n</tr>\n\n</table>\n\n</td>\n</tr>\n</table>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        -240
+      ],
+      "id": "e012e257-6f34-48e1-86f4-6fe54d6a32cf",
+      "name": "Send a message1"
+    },
+    {
+      "parameters": {
+        "content": "Monitors new Google Form responses and automatically starts the meeting scheduling workflow whenever a new request is submitted."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -272
+      ],
+      "id": "16971d62-db47-4478-88fa-1aadfad5920e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Validates and transforms form data into standardized meeting details, including start/end times and Google Calendar event payloads."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -272
+      ],
+      "id": "d6be61fc-0625-4ab4-b6f1-ecc38d8e4632",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Checks the selected time slot in Google Calendar to determine whether the requested meeting can be scheduled."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        64,
+        80
+      ],
+      "id": "f48c9868-c4ee-4025-a659-15234b03d5c0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Routes the workflow based on calendar availability, proceeding to either schedule the meeting or notify the requester of unavailability."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -272
+      ],
+      "id": "0838de57-904b-4870-8f63-4a0d804652e2",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Creates a new Google Calendar event for the approved meeting using the validated scheduling details.",
+        "height": 144,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        -400
+      ],
+      "id": "4f267b21-7b36-4526-8079-4ead3409f85f",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Sends a professional confirmation email containing the scheduled meeting details to the requester."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -400
+      ],
+      "id": "eaec0b23-fc9d-4e95-97af-095b43b22e63",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Updates the meeting request status as rejected when the requested time slot is unavailable."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -400
+      ],
+      "id": "5deafb5f-24c7-4ce6-92a0-a09c28090829",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Updates the meeting request status as rejected when the requested time slot is unavailable."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        528,
+        176
+      ],
+      "id": "2d6752d6-7d49-4f7f-b069-883ca1656cf4",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Sends a polite notification informing the requester that the selected time slot is unavailable and invites them to choose another slot."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        176
+      ],
+      "id": "4b40329f-2cac-43de-8dad-cc9a81181d61",
+      "name": "Sticky Note8"
+    }
+  ],
+  "connections": {
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get availability in a calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get availability in a calendar": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
