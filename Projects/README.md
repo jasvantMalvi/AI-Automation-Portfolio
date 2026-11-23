@@ -95,3 +95,5 @@ Detailed project documentation will be added progressively.
 ---
 
 *Each project will include its purpose, workflow architecture, tools, screenshots, and setup instructions where applicable.*
+
+42. [Smart Grocery Budget Optimization Bot](./Smart-Grocery-Budget-Optimization-Bot/) — A Telegram grocery-planning assistant that accepts text and voice requests, classifies five intents, estimates grocery prices, recommends budget allocations, optimizes shopping lists, and prepares a budget-recovery report using n8n, GPT-5 Mini, JavaScript, and ElevenLabs. Price outputs are AI-generated estimates rather than verified live retail prices; the project README documents further validation and routing limitations.
