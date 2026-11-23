@@ -43,6 +43,8 @@ Detailed project documentation will be added progressively.
 22. [New Enquiry Notifier Bot](./New-Enquiry-Notifier-Bot/) — Captures Google Form enquiries through Google Sheets, generates unique enquiry IDs, validates customer details, alerts the business owner through Telegram, and sends customer acknowledgement emails using n8n.
 23. [AI Astrologist or Pandit](./AI-Astrologist-or-Pandit/) — A WhatsApp-based astrology assistant built with n8n and OpenAI. Extracts user-provided birth details, generates Vedic astrology-style responses, asks for missing information, supports Hindi, English, and Hinglish, and replies through WhatsApp.
 
+24. [Multi Language Translator Bot](./Multi-Language-Translator-Bot/) — A manually triggered multilingual translation workflow using n8n, Anthropic Claude Sonnet 4.6, and Google Drive. Detects the source language, translates text into 20 configured languages, formats a structured translation report, and uploads it as a text file to Google Drive.
+
 ## Technologies Used
 
 - n8n
