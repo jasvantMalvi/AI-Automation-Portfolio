@@ -67,6 +67,8 @@ Detailed project documentation will be added progressively.
 
 35. [Automated Certificate Delivery Agent](./Automated-Certificate-Delivery-Agent/) — Manually processes pending recipient records from Google Sheets, copies a Google Docs certificate template, replaces recipient/course placeholders, shares the generated certificate with the recipient, updates the delivery record, and sends a personalized HTML Gmail message. The README documents the recipient-email field mismatch, premature `Sent` status update, missing error handling, and retry-related duplicate risks.
 
+36. [AI-Powered Batch Schedule Management & Student Notification Agent](./AI-Powered-Batch-Schedule-Management-and-Student-Notification-Agent/) — Accepts administrator schedule-change requests through Telegram text or voice, uses ElevenLabs transcription and GPT-5 Mini to extract batch, date, new time and reason, calculates the revised end time from the existing duration, checks room/trainer conflicts, and prepares text and audio Telegram notifications. The README documents important defects in batch lookup, conflict detection, student message routing, and schedule update handling.
+
 ## Technologies Used
 
 - n8n
