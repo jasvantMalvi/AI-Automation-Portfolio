@@ -1,0 +1,646 @@
+{
+  "name": "Daily News Digest Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=artificial%20intelligence%20when%3A6h&hl=en-IN&gl=IN&ceid=IN%3Aen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        -256
+      ],
+      "id": "b6739a36-648e-47ff-80f2-bc0570b2d819",
+      "name": "AI & Technology",
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=business%20economy%20when%3A6h&hl=en-IN&gl=IN&ceid=IN%3Aen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        -48
+      ],
+      "id": "197884e3-8bce-443c-8050-968d2c279e5b",
+      "name": "Business & Economy",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=world%20news%20when%3A6h&hl=en-IN&gl=IN&ceid=IN%3Aen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "7aec7f79-efb2-41dd-b3f2-1dbb26c5ebd9",
+      "name": "World News",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=science%20space%20when%3A6h&hl=en-IN&gl=IN&ceid=IN%3Aen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        384
+      ],
+      "id": "16fb4879-48ec-42f5-817a-750439be24a6",
+      "name": "Science & Space",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=India%20news%20when%3A6h&hl=en-IN&gl=IN&ceid=IN%3Aen",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        608
+      ],
+      "id": "e594dc63-ecd7-4f78-bdd1-88f31e747816",
+      "name": "India News",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -816,
+        160
+      ],
+      "id": "62e1fe73-693f-4c9d-b689-198bac5b9f22",
+      "name": "Daily 9 AM Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "05945412-c6c5-45f1-b5d3-f64620f03eb2",
+              "name": "Headline",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "8797e8a1-ac61-4f24-ad6d-74f78ffe36d7",
+              "name": "Link",
+              "value": "={{ $json.link }}",
+              "type": "string"
+            },
+            {
+              "id": "4807bebf-dc9e-4104-a11d-f661a7f2f50f",
+              "name": "Publish Date",
+              "value": "={{ $json.pubDate }}",
+              "type": "string"
+            },
+            {
+              "id": "2ada6fdd-c69a-47ed-b7af-ff71e06433eb",
+              "name": "Description",
+              "value": "={{ $json.contentSnippet }}",
+              "type": "string"
+            },
+            {
+              "id": "ad33fdab-7714-41eb-b298-52f6efa56a1d",
+              "name": "Source",
+              "value": "Google News",
+              "type": "string"
+            },
+            {
+              "id": "f862ec2a-96b4-4191-8a05-80164985abea",
+              "name": "Importance Score",
+              "value": "={{ $json.importanceScore }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1088,
+        176
+      ],
+      "id": "8e5a6c12-7f86-4c70-a9aa-ffa9cb82fa2a",
+      "name": "Prepare Article Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst seen = new Set();\nconst news = [];\n\nfor (const item of items) {\n  const data = item.json;\n\n  const title = String(data.title || '').trim();\n\n  if (!title) continue;\n\n  // Normalize title for duplicate detection\n  const key = title\n    .toLowerCase()\n    .replace(/[^\\w\\s]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n\n  const text = (\n    title + ' ' +\n    String(data.contentSnippet || '')\n  ).toLowerCase();\n\n  let score = 0;\n\n  // High importance\n  const high = [\n    'breaking',\n    'war',\n    'attack',\n    'election',\n    'president',\n    'prime minister',\n    'government',\n    'crisis',\n    'earthquake',\n    'ai',\n    'artificial intelligence',\n    'openai',\n    'google',\n    'microsoft',\n    'nvidia',\n    'economy',\n    'market crash'\n  ];\n\n  // Medium importance\n  const medium = [\n    'business',\n    'technology',\n    'startup',\n    'investment',\n    'market',\n    'science',\n    'space',\n    'health',\n    'security',\n    'cybersecurity',\n    'india',\n    'global',\n    'research'\n  ];\n\n  for (const word of high) {\n    if (text.includes(word)) score += 5;\n  }\n\n  for (const word of medium) {\n    if (text.includes(word)) score += 2;\n  }\n\n  news.push({\n    ...data,\n    importanceScore: score\n  });\n}\n\n// Sort most important first\nnews.sort((a, b) => b.importanceScore - a.importanceScore);\n\n// Return only 20\nreturn news.slice(0, 20).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        176
+      ],
+      "id": "4ac295f3-5180-40f1-9031-bfd24e8ad0d1",
+      "name": "Filter & Rank Top 20"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        640,
+        176
+      ],
+      "id": "fd1e4cea-0bd4-41dd-9018-1ec8a82f80c4",
+      "name": "Merge All News"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the following news article and return a structured analysis.\n\nHEADLINE:\n{{ $json.Headline }}\n\nDESCRIPTION:\n{{ $json.Description }}\n\nSOURCE:\n{{ $json.Source }}\n\nPUBLISHED DATE:\n{{ $json[\"Publish Date\"] }}\n\nTasks:\n\n1. Write a concise summary of the article in 2–3 sentences.\n2. Select exactly ONE category:\n   - AI & Technology\n   - Business & Economy\n   - World News\n   - Science & Space\n   - India News\n\n3. Determine the sentiment:\n   - Positive\n   - Neutral\n   - Negative\n\n4. Determine the trend signal:\n   - Rising\n   - Stable\n   - Declining\n   - Emerging\n\nImportant rules:\n- Base the analysis only on the information provided.\n- Do not invent facts.\n- Keep the summary factual and concise.\n- Return exactly one category, one sentiment, and one trend.\n- Do not include explanations outside the requested output format.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional news analysis assistant.  Your job is to analyze one news article at a time and produce accurate, concise, structured information.  Do not invent facts or add information that is not supported by the article.  Follow the allowed categories, sentiment values, and trend values exactly.  The summary must be factual and 2–3 sentences long."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1296,
+        176
+      ],
+      "id": "1ad824c2-af9b-49c1-b863-abe8765cf0c2",
+      "name": "AI - Analyze Article"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        384
+      ],
+      "id": "065f4291-d2cc-4889-84b5-ac90ab606cff",
+      "name": "GPT - Article Analysis"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"summary\": \"string\",\n  \"category\": \"AI & Technology | Business & Economy | World News | Science & Space | India News\",\n  \"sentiment\": \"Positive | Neutral | Negative\",\n  \"trend\": \"Rising | Stable | Declining | Emerging\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1504,
+        384
+      ],
+      "id": "e3baac79-308c-408c-b5b0-77f1adb4de72",
+      "name": "Parse Article Analysis"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Daily News Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.setZone('Asia/Kolkata').toFormat('dd-MM-yyyy') }}",
+            " Headline ": "={{ $('Prepare Article Data').item.json.Headline }}",
+            "Summary": "={{ $json.output.summary }}",
+            " Category": "={{ $json.output.category }}",
+            " Sentiment": "={{ $json.output.sentiment }}",
+            " Trend": "={{ $json.output.trend }}",
+            " Importance Score": "={{ $('Prepare Article Data').item.json['Importance Score'] }}",
+            " Source": "={{ $('Prepare Article Data').item.json.Source }}",
+            " Publishe Date": "={{ $('Prepare Article Data').item.json['Publish Date'] }}",
+            " Link": "={{ $('Prepare Article Data').item.json.Link }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Headline ",
+              "displayName": " Headline ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Category",
+              "displayName": " Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Sentiment",
+              "displayName": " Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Trend",
+              "displayName": " Trend",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Importance Score",
+              "displayName": " Importance Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Source",
+              "displayName": " Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Publishe Date",
+              "displayName": " Publishe Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " Link",
+              "displayName": " Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1664,
+        176
+      ],
+      "id": "5d14659b-d249-45ea-b5e7-669673c09c15",
+      "name": "Save News to Google Sheets"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create today's Daily News Digest from the following analyzed news articles.\n\nDATE:\n{{ $now.setZone('Asia/Kolkata').toFormat('dd MMMM yyyy') }}\n\nNEWS DATA:\n\n{{ JSON.stringify($input.all().map(item => item.json)) }}\n\nCreate the digest using this structure:\n\nDAILY NEWS DIGEST\n[Date]\n\nTOP STORIES\n\nSelect the 5 most important stories across all categories.\n\nFor each story provide:\n- Headline\n- 2–3 sentence explanation\n- Category\n- Source\n\nAI & TECHNOLOGY\n\nInclude the most important relevant stories from this category.\n\nBUSINESS & ECONOMY\n\nInclude the most important relevant stories from this category.\n\nWORLD NEWS\n\nInclude the most important relevant stories from this category.\n\nSCIENCE & SPACE\n\nInclude the most important relevant stories from this category.\n\nINDIA NEWS\n\nInclude the most important relevant stories from this category.\n\nKEY TRENDS\n\nIdentify 3–5 major trends or themes visible across today's news.\n\nSENTIMENT OVERVIEW\n\nBriefly describe the overall sentiment of today's news using the available sentiment data.\n\nIMPORTANT RULES:\n\n- Do not repeat the same story in multiple sections.\n- Do not include every article. Focus on the most important information.\n- Prefer high-importance stories.\n- If a category has no meaningful story, omit that category rather than inventing content.\n- Keep each story concise.\n- Use only information provided in the input.\n- Do not invent statistics, quotes, events, or conclusions.\n- Make the final document professional and easy to scan.\n- Do not include raw JSON.\n- Do not include unnecessary introductions or closing remarks.",
+        "options": {
+          "systemMessage": "You are a professional Daily News Digest Editor.\n\nYour job is to transform analyzed news articles into a concise, informative, and well-structured daily news digest.\n\nYou will receive a list of news articles that have already been analyzed for:\n- Headline\n- Summary\n- Category\n- Sentiment\n- Trend\n- Importance Score\n- Source\n- Published Date\n- Link\n\nYour responsibilities:\n\n1. Select the most significant and useful stories.\n2. Avoid repeating stories that cover the same event.\n3. Organize stories by category.\n4. Prioritize stories with higher importance scores, while using your own editorial judgment.\n5. Identify major themes and trends across the articles.\n6. Provide a short overall sentiment overview.\n7. Write clearly and factually.\n8. Do not invent facts or information that is not present in the input.\n9. Do not exaggerate headlines or create sensational claims.\n10. Keep the digest concise enough to be read quickly.\n\nUse these categories only:\n- AI & Technology\n- Business & Economy\n- World News\n- Science & Space\n- India News\n\nThe final output must be suitable for directly saving into a Google Doc.\n\nDo not mention that you are an AI, that you received data from Google Sheets, or that you performed an analysis."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1888,
+        176
+      ],
+      "id": "a76bf2a0-573a-4538-ac5f-fffd3e057810",
+      "name": "AI - Generate Daily Digest"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        384
+      ],
+      "id": "ba773595-5e0d-473e-84fe-a6c58900914d",
+      "name": "GPT - Daily Digest"
+    },
+    {
+      "parameters": {
+        "folderId": "REPLACE_WITH_YOUR_GOOGLE_DRIVE_FOLDER_ID",
+        "title": "=Final News Digest  {{ $('Prepare Article Data').item.json['Publish Date'] }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        176
+      ],
+      "id": "064dfd0f-34af-4e1c-a0de-c1960f7f0c69",
+      "name": "Create Daily Digest Doc"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('AI - Generate Daily Digest').item.json.output }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        176
+      ],
+      "id": "43482f3d-f52d-4d88-b1a5-0e002dd191eb",
+      "name": "Write Digest to Google Doc"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI & Technology": {
+      "main": [
+        [
+          {
+            "node": "Merge All News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business & Economy": {
+      "main": [
+        [
+          {
+            "node": "Merge All News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "World News": {
+      "main": [
+        [
+          {
+            "node": "Merge All News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Science & Space": {
+      "main": [
+        [
+          {
+            "node": "Merge All News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "India News": {
+      "main": [
+        [
+          {
+            "node": "Merge All News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily 9 AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI & Technology",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Business & Economy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "World News",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Science & Space",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "India News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Article Data": {
+      "main": [
+        [
+          {
+            "node": "AI - Analyze Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter & Rank Top 20": {
+      "main": [
+        [
+          {
+            "node": "Prepare Article Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All News": {
+      "main": [
+        [
+          {
+            "node": "Filter & Rank Top 20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Analyze Article": {
+      "main": [
+        [
+          {
+            "node": "Save News to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Article Analysis": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI - Analyze Article",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Article Analysis": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI - Analyze Article",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save News to Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "AI - Generate Daily Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI - Generate Daily Digest": {
+      "main": [
+        [
+          {
+            "node": "Create Daily Digest Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Daily Digest": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI - Generate Daily Digest",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Daily Digest Doc": {
+      "main": [
+        [
+          {
+            "node": "Write Digest to Google Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
