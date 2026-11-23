@@ -102,3 +102,5 @@ Detailed project documentation will be added progressively.
 *Each project will include its purpose, workflow architecture, tools, screenshots, and setup instructions where applicable.*
 
 44. [LinkedIn Job Alert Agent](./LinkedIn-Job-Alert-Agent/) — Runs daily at 9:00 AM, reads up to 10 job records from an existing Apify dataset, normalizes job details, generates structured two-sentence summaries with GPT-5 Mini, appends records to Google Sheets, and sends a consolidated HTML Gmail digest. The README notes that the workflow does not launch the scraper, apply job relevance filters, or deduplicate repeated listings.
+
+45. [Leave Request Notifier Bot](./Leave-Request-Notifier-Bot/) — Detects new leave-request rows in Google Sheets, extracts employee and leave details, uses GPT-5 Mini with a structured output parser to prepare a neutral summary and Pending status, updates the matching sheet record, and sends an HTML email notification. The README documents two export issues to fix before production: the Gmail recipient currently resolves to the employee email, and the sheet update attempts to parse an email from the AI employee-name field.
