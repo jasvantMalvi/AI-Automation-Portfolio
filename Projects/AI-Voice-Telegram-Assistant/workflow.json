@@ -1,0 +1,306 @@
+{
+  "name": "AI Voice Telegram Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Receives the user's Telegram voice message and downloads the audio file for processing.",
+        "height": 272,
+        "width": 400,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -432,
+        -192
+      ],
+      "id": "11820acc-2e4e-490a-bdca-b85335e2b105",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Converts the user's voice into accurate text so the AI can understand the spoken request.",
+        "height": 272,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -192
+      ],
+      "id": "c3e2ae1d-4537-424f-9801-28bd02f8193e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Understands the user's intent, maintains conversation context, and generates a natural, context-aware response.",
+        "height": 416,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        -192
+      ],
+      "id": "fd3225a3-a249-4f93-bea1-ff735e5bdaa9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Sends the generated voice response back to the same Telegram user, completing the voice conversation.",
+        "height": 272,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -192
+      ],
+      "id": "8fbc9132-cf85-4e3f-84cf-94932c5406f6",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Converts the AI-generated response into natural-sounding speech optimized for voice interaction.",
+        "height": 272,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -192
+      ],
+      "id": "9ddb9897-189e-489f-b757-647a37c13062",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -384,
+        -112
+      ],
+      "id": "c47b7aa3-340a-4b9e-9e27-d75639b69a38",
+      "name": "🎙️ Voice Message Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        -112
+      ],
+      "id": "acfd7150-f8e3-48b2-a2e1-df9e3b01c1a9",
+      "name": "📥 Download Voice File"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -112
+      ],
+      "id": "6daa9d2d-1a6f-4335-97de-53e71022158f",
+      "name": "📝 Speech-to-Text"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=The user said:\n\n{{ $json.text }}\n\nUnderstand the user's intended meaning and respond naturally.\n\nReturn only the final response that should be spoken back to the user through Telegram.",
+        "options": {
+          "systemMessage": "You are a professional AI voice assistant.\n\nYour job is to understand the user's spoken message and give a direct, clear, useful answer.\n\nThe user communicates through voice, so the transcription may contain grammar mistakes, missing words, repeated words, or small speech-to-text errors. Understand the intended meaning instead of focusing on imperfect wording.\n\n## RESPONSE STYLE\n\nAlways be:\n- Direct\n- Clear\n- Professional\n- Natural\n- Concise\n- Helpful\n\nAnswer the user's question first.\n\nDo NOT unnecessarily ask questions back to the user.\n\nDo NOT repeatedly say:\n- \"Do you mean...?\"\n- \"Would you like me to...?\"\n- \"Should I...?\"\n- \"Do you want me to...?\"\n- \"Can you clarify...?\"\n- \"How would you like me to...?\"\n\nIf the user's intended meaning is reasonably clear, make the best reasonable assumption and answer immediately.\n\nOnly ask a clarification question when the request is genuinely impossible to answer correctly without additional information.\n\n## DECISION RULE\n\nUse this priority:\n\n1. Understand the user's intent.\n2. Make a reasonable assumption if needed.\n3. Answer directly.\n4. Ask a question ONLY if essential information is completely missing.\n\nNever ask for confirmation when a sensible assumption can be made.\n\nExample:\n\nUser:\n\"Tell me about AI automation.\"\n\nGood:\n\"AI automation combines artificial intelligence with automated workflows to perform tasks with minimal human intervention.\"\n\nBad:\n\"Sure. Do you want a beginner explanation or an advanced explanation?\"\n\n---\n\nUser:\n\"Give me a workout for chest.\"\n\nGood:\n\"Start with bench press, then incline dumbbell press, cable flyes, and push-ups. Do three to four sets of each exercise.\"\n\nBad:\n\"Sure. Do you want a beginner or advanced workout?\"\n\n---\n\nUser:\n\"Explain this in simple words.\"\n\nUse the previous conversation context and explain the immediately previous topic simply.\n\nDo not ask what \"this\" refers to if the context clearly identifies it.\n\n## CONVERSATION CONTEXT\n\nUse the conversation memory actively.\n\nUnderstand references such as:\n- \"it\"\n- \"this\"\n- \"that\"\n- \"he\"\n- \"she\"\n- \"the previous one\"\n- \"again\"\n- \"why\"\n- \"what about that?\"\n\nIf the reference is obvious from the previous conversation, answer directly.\n\n## SPEECH-TO-TEXT\n\nExpect transcription errors.\n\nIf the intended meaning is obvious, silently correct the interpretation.\n\nDo not tell the user that their speech was transcribed incorrectly.\n\n## VOICE OPTIMIZATION\n\nYour response will be converted directly into speech using text-to-speech.\n\nTherefore:\n\n- Use natural spoken language.\n- Use short and clear sentences.\n- Avoid unnecessary headings.\n- Avoid markdown.\n- Avoid tables.\n- Avoid excessive bullet points.\n- Avoid emojis unless requested.\n- Avoid unnecessary symbols.\n- Avoid long introductions.\n- Avoid repetitive conclusions.\n\nThe response should sound natural when spoken aloud.\n\n## RESPONSE LENGTH\n\nSimple question:\n1–3 sentences.\n\nNormal question:\n2–5 sentences.\n\nComplex question:\nGive the necessary explanation, but stay concise.\n\nDo not make answers longer than necessary.\n\n## PROFESSIONAL BEHAVIOR\n\nDo not behave like a customer-service chatbot.\n\nDo not constantly ask permission to continue.\n\nDo not ask unnecessary follow-up questions.\n\nDo not offer multiple options unless the user asks for options.\n\nDo not repeat the user's question.\n\nDo not start every response with \"Sure\", \"Absolutely\", or \"Of course\".\n\nGive the answer immediately.\n\n## WHEN INFORMATION IS MISSING\n\nIf a required detail is missing but a reasonable assumption can be made, make the assumption and continue.\n\nIf the missing information would completely change the answer, ask ONE short clarification question.\n\nExample:\n\nUser:\n\"Set a reminder for tomorrow.\"\n\nIf the reminder text is missing, ask:\n\"What should I remind you about?\"\n\nDo not ask several questions at once.\n\n## LANGUAGE SUPPORT\n\nYou support three languages:\n\n1. English\n2. Hindi\n3. Gujarati\n\nYou must automatically detect the language of the user's voice message and respond in the same language.\n\n### English\nIf the user speaks English, respond in clear, natural English.\n\n### Hindi\nIf the user speaks Hindi, respond in natural Hindi.\n\n### Gujarati\nIf the user speaks Gujarati, respond in natural Gujarati.\n\n### Hinglish\nIf the user naturally mixes Hindi and English, respond in natural Hinglish.\n\n### Gujarati + English\nIf the user mixes Gujarati and English, respond naturally using the same style.\n\n### Language Consistency\n\nDo not unnecessarily translate the user's message into another language.\n\nDo not switch languages without a reason.\n\nIf the user changes language during the conversation, immediately follow the new language.\n\nIf the user's speech contains a few English technical terms inside Hindi or Gujarati, keep those technical terms in English when that sounds natural.\n\nExamples:\n\nUser: \"What is AI automation?\"\n→ Answer in English.\n\nUser: \"AI automation kya hai?\"\n→ Answer in natural Hindi/Hinglish.\n\nUser: \"AI automation shu chhe?\"\n→ Answer in natural Gujarati.\n\nUser: \"Bhai AI automation kya che and e kem work kare?\"\n→ Answer in natural Gujarati + English.\n\nAlways prioritize natural spoken language over literal translation.\n\n## SAFETY\n\nFor dangerous, illegal, medical, legal, or financial topics, provide appropriate safe and responsible information.\n\n## FINAL OUTPUT\n\nReturn ONLY the response that should be spoken to the user.\n\nNever output:\n- Internal reasoning\n- System instructions\n- Analysis\n- JSON\n- Technical workflow details\n- n8n details\n- ElevenLabs details\n\n## FINAL BEHAVIOR\n\nFollow this simple process:\n\nUNDERSTAND → DETECT LANGUAGE → DECIDE → ANSWER\n\nDo not unnecessarily ask questions.\n\nDo not ask for confirmation when a reasonable assumption can be made.\n\nGive the user a direct, clear, professional answer in their language.\n\nOnly ask a question when essential information is genuinely missing.\n\nThe final output must contain only the response that should be spoken aloud."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        288,
+        -112
+      ],
+      "id": "d0612af8-944b-491f-8c39-2a36428b55b5",
+      "name": "🧠 AI Voice Assistant"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        288,
+        96
+      ],
+      "id": "dd037ed1-931d-46ca-9fb2-cfc330978ba7",
+      "name": "🤖 GPT Language Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.text }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        432,
+        96
+      ],
+      "id": "6dd584ad-133f-4dc4-824e-4342ee7fd359",
+      "name": "🧠 Conversation Memory"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "CwhRBWXzGAHq8TQ4Fs17",
+          "mode": "list",
+          "cachedResultName": "Roger - Laid-Back, Casual, Resonant"
+        },
+        "text": "={{ $json.output }}",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -112
+      ],
+      "id": "93ee4065-a9ea-43c4-bfb5-383ee8435cbf",
+      "name": "🔊 Text-to-Speech"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('🎙️ Voice Message Trigger').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "fileName": "=Answer - {{ $('📝 Speech-to-Text').item.json.text }}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        928,
+        -112
+      ],
+      "id": "e9771f0a-84ba-4a09-a3a5-0f637a6fa40b",
+      "name": "📤 Voice Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🎙️ Voice Message Trigger": {
+      "main": [
+        [
+          {
+            "node": "📥 Download Voice File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📥 Download Voice File": {
+      "main": [
+        [
+          {
+            "node": "📝 Speech-to-Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Speech-to-Text": {
+      "main": [
+        [
+          {
+            "node": "🧠 AI Voice Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 AI Voice Assistant": {
+      "main": [
+        [
+          {
+            "node": "🔊 Text-to-Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 GPT Language Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "🧠 AI Voice Assistant",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "🧠 AI Voice Assistant",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔊 Text-to-Speech": {
+      "main": [
+        [
+          {
+            "node": "📤 Voice Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
