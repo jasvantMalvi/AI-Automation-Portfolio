@@ -1,0 +1,231 @@
+{
+  "name": "Client Registration Form",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Client Registration Form",
+        "formDescription": "Welcome to our Institute, Fill the form to enroll in Courses",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name"
+            },
+            {
+              "fieldLabel": "Contact No.",
+              "fieldType": "number"
+            },
+            {
+              "fieldLabel": "Email Address",
+              "fieldType": "email"
+            },
+            {
+              "fieldLabel": "Cources",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Ai Agents"
+                  },
+                  {
+                    "option": "UI/UX"
+                  },
+                  {
+                    "option": "Digital Marketing"
+                  },
+                  {
+                    "option": "Data Analytics"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "City"
+            },
+            {
+              "fieldLabel": "Gender",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Male"
+                  },
+                  {
+                    "option": "Female"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Message"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "081bbbe1-c2b3-439f-93a0-71298b6b73a1",
+      "name": "On form submission"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Client Registration Form"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email Address": "={{ $json['Email Address'] }}",
+            "Full Name": "={{ $json['Full Name'] }}",
+            "Contact No.": "={{ $json['Contact No.'] }}",
+            "Cources": "={{ $json.Cources }}",
+            "City": "={{ $json.City }}",
+            "Gender": "={{ $json.Gender }}",
+            "Message": "={{ $json.Message }}"
+          },
+          "matchingColumns": [
+            "Email Address"
+          ],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact No.",
+              "displayName": "Contact No.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cources",
+              "displayName": "Cources",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Gender",
+              "displayName": "Gender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "531f6a70-153f-4b1d-8027-0dbd2e8e7d08",
+      "name": "Append or update row in sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['Email Address'] }}",
+        "subject": "Welcome to Our Institute!",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Welcome</title>\n</head>\n<body style=\"margin:0;padding:0;background-color:#f4f7fa;font-family:Arial,Helvetica,sans-serif;\">\n\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f4f7fa;padding:30px 0;\">\n<tr>\n<td align=\"center\">\n\n<table width=\"650\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08);\">\n\n<!-- Header -->\n<tr>\n<td style=\"background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:40px;text-align:center;\">\n<h1 style=\"margin:0;color:#ffffff;font-size:30px;\">\nWelcome to Our Institute\n</h1>\n<p style=\"color:#e5e7eb;font-size:16px;margin-top:10px;\">\nThank you for registering with us.\n</p>\n</td>\n</tr>\n\n<!-- Greeting -->\n<tr>\n<td style=\"padding:35px;\">\n<h2 style=\"color:#111827;margin-top:0;\">\nHello {{ $json['Full Name'] }},\n</h2>\n\n<p style=\"font-size:16px;color:#4b5563;line-height:1.7;\">\nThank you for submitting your registration form. We have successfully received your details and our team will contact you shortly.\n</p>\n\n<!-- Details Card -->\n<table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\"\nstyle=\"background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;margin-top:25px;\">\n\n<tr>\n<td colspan=\"2\"\nstyle=\"background:#eef2ff;padding:15px;font-size:18px;font-weight:bold;color:#4338ca;\">\nRegistration Details\n</td>\n</tr>\n\n<tr>\n<td style=\"padding:12px;font-weight:bold;width:35%;\">Full Name</td>\n<td style=\"padding:12px;\">{{ $json['Full Name'] }}</td>\n</tr>\n\n<tr style=\"background:#ffffff;\">\n<td style=\"padding:12px;font-weight:bold;\">Email</td>\n<td style=\"padding:12px;\">{{ $json['Email Address'] }}</td>\n</tr>\n\n<tr>\n<td style=\"padding:12px;font-weight:bold;\">Phone</td>\n<td style=\"padding:12px;\">{{ $json['Contact No.'] }}</td>\n</tr>\n\n<tr style=\"background:#ffffff;\">\n<td style=\"padding:12px;font-weight:bold;\">Course</td>\n<td style=\"padding:12px;\">{{ $json['Cources'] }}</td>\n</tr>\n\n<tr>\n<td style=\"padding:12px;font-weight:bold;\">City</td>\n<td style=\"padding:12px;\">{{ $json['City'] }}</td>\n</tr>\n\n<tr style=\"background:#ffffff;\">\n<td style=\"padding:12px;font-weight:bold;\">Gender</td>\n<td style=\"padding:12px;\">{{ $json['Gender'][0] }}</td>\n</tr>\n\n<tr>\n<td style=\"padding:12px;font-weight:bold;\">Message</td>\n<td style=\"padding:12px;\">{{ $json['Message'] }}</td>\n</tr>\n\n</table>\n\n<!-- CTA -->\n<div style=\"text-align:center;margin-top:35px;\">\n<a href=\"https://yourwebsite.com\"\nstyle=\"background:#4f46e5;color:#ffffff;text-decoration:none;padding:14px 30px;border-radius:8px;font-weight:bold;display:inline-block;\">\nVisit Our Website\n</a>\n</div>\n\n<p style=\"font-size:15px;color:#4b5563;line-height:1.7;margin-top:30px;\">\nOur admission team will review your registration and reach out with the next steps.\n</p>\n\n<p style=\"margin-top:25px;color:#111827;\">\nBest Regards,<br>\n<strong>Admissions Team</strong><br>\nYour Institute Name\n</p>\n\n</td>\n</tr>\n\n<!-- Footer -->\n<tr>\n<td style=\"background:#111827;color:#d1d5db;text-align:center;padding:25px;font-size:13px;\">\n© 2026 Your Institute. All Rights Reserved.<br>\nAhmedabad, Gujarat, India\n</td>\n</tr>\n\n</table>\n\n</td>\n</tr>\n</table>\n\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "2ab85fab-f2e1-4b66-8a7b-50a5cd02a905",
+      "name": "Send a message"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
