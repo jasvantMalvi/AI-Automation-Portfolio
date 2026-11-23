@@ -77,6 +77,8 @@ Detailed project documentation will be added progressively.
 
 40. [AI Confidence Coach Agent](./AI-Confidence-Coach-Agent/) — Uses an n8n chat workflow to onboard users by collecting their name, career stage, main confidence challenge, and goal; stores profiles in Google Sheets; and uses GPT-4o-mini to provide practical, personalized coaching responses. Completed exchanges are logged to a separate `Conversation_Log` sheet. The README documents identity/session persistence concerns, public-chat access considerations, and the fact that conversation logs are not retrieved as AI memory.
 
+41. [Telegram AI Assistant](./Telegram-AI-Assistant/) — A text-based Telegram chatbot built with n8n and GPT-5 Mini. It generates general-purpose conversational answers and sends each response both to the originating Telegram user and to a configured Gmail inbox. The workflow supports multilingual responses through its prompt. The README documents its fixed email-copy behaviour, lack of conversation memory and live web search, and text-only input handling.
+
 ## Technologies Used
 
 - n8n
