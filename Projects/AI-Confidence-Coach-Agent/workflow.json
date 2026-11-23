@@ -1,0 +1,450 @@
+{
+  "name": "AI Confidence Coach Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// ========================================\n// 🤖 AI CONFIDENCE COACH\n// Extract data from Chat Trigger\n// ========================================\n\nconst input = $input.first().json;\n\n// ========================================\n// USER MESSAGE\n// ========================================\n\nconst userMessage =\n  input.chatInput ??\n  input.message ??\n  input.text ??\n  '';\n\n\n// ========================================\n// USER / SESSION ID\n// ========================================\n\nconst userId =\n  input.userId ??\n  input.user_id ??\n  input.sessionId ??\n  input.session_id ??\n  null;\n\n\n// ========================================\n// CURRENT TIMESTAMP - INDIA\n// ========================================\n\nconst now = new Date();\n\nconst parts = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'Asia/Kolkata',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  second: '2-digit',\n  hourCycle: 'h23'\n}).formatToParts(now);\n\nconst getPart = (type) =>\n  parts.find(part => part.type === type)?.value;\n\nconst timestamp =\n  `${getPart('year')}-${getPart('month')}-${getPart('day')} ` +\n  `${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;\n\n\n// ========================================\n// RETURN DATA\n// ========================================\n\nreturn [\n  {\n    json: {\n      user_id: userId,\n      user_message: userMessage,\n      timestamp: timestamp,\n      timezone: 'Asia/Kolkata'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -128
+      ],
+      "id": "04d10773-dda0-412d-a179-9852c74adb5b",
+      "name": "🧩 Extract Chat Input"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Confidence Coach Agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users_Profile"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "user_id",
+              "lookupValue": "={{ $json.user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        64,
+        -128
+      ],
+      "id": "094d8478-4a51-4721-a0a1-ee0d193d8c5b",
+      "name": "🔎 Find User Profile",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// ==========================================\n// 🤖 AI CONFIDENCE COACH\n// PROFILE MANAGER\n// ==========================================\n\n\n// ==========================================\n// 1. GET USER INPUT FROM FIRST CODE NODE\n// ==========================================\n\nconst original = $('🧩 Extract Chat Input').first().json;\n\nconst userId = original.user_id || '';\nconst userMessage = (original.user_message || '').trim();\nconst timestamp = original.timestamp || '';\n\n\n// ==========================================\n// 2. GET USER PROFILE FROM GOOGLE SHEETS\n// ==========================================\n\nconst sheetItems = $input.all();\n\nlet profile = null;\n\nif (sheetItems.length > 0) {\n  profile = sheetItems[0].json;\n}\n\n\n// ==========================================\n// 3. CHECK IF USER ALREADY EXISTS\n// ==========================================\n\nconst existingUser =\n  profile &&\n  profile.user_id &&\n  String(profile.user_id).trim() !== '';\n\n\n// ==========================================\n// 4. HELPER FUNCTION\n// ==========================================\n\nfunction clean(value) {\n  if (value === undefined || value === null) {\n    return '';\n  }\n\n  return String(value).trim();\n}\n\n\n// ==========================================\n// 5. NEW USER\n// ==========================================\n\nif (!existingUser) {\n\n  return [\n    {\n      json: {\n\n        user_id: userId,\n\n        user_message: userMessage,\n\n        timestamp: timestamp,\n\n        user_status: 'new_user',\n\n        name: '',\n\n        career_stage: '',\n\n        challenge: '',\n\n        goal: '',\n\n        onboarding_step: 'name',\n\n        profile_complete: false,\n\n        missing_field: 'name',\n\n        next_question:\n          \"Hi! 👋 I'm your AI Confidence Coach. What's your name?\"\n      }\n    }\n  ];\n}\n\n\n// ==========================================\n// 6. EXISTING USER\n// ==========================================\n\nlet name = clean(profile.name);\n\nlet careerStage = clean(profile.career_stage);\n\nlet challenge = clean(profile.challenge);\n\nlet goal = clean(profile.goal);\n\nlet onboardingStep = clean(profile.onboarding_step);\n\n\n// ==========================================\n// 7. SAVE CURRENT ANSWER\n// ==========================================\n\nif (onboardingStep === 'name' && !name) {\n\n  name = userMessage;\n\n  onboardingStep = 'career_stage';\n\n}\n\nelse if (onboardingStep === 'career_stage' && !careerStage) {\n\n  careerStage = userMessage;\n\n  onboardingStep = 'challenge';\n\n}\n\nelse if (onboardingStep === 'challenge' && !challenge) {\n\n  challenge = userMessage;\n\n  onboardingStep = 'goal';\n\n}\n\nelse if (onboardingStep === 'goal' && !goal) {\n\n  goal = userMessage;\n\n  onboardingStep = 'completed';\n\n}\n\n\n// ==========================================\n// 8. CHECK PROFILE COMPLETION\n// ==========================================\n\nconst profileComplete =\n  name !== '' &&\n  careerStage !== '' &&\n  challenge !== '' &&\n  goal !== '';\n\n\n// ==========================================\n// 9. FIND NEXT MISSING FIELD\n// ==========================================\n\nlet missingField = '';\n\nlet nextQuestion = '';\n\n\nif (!name) {\n\n  missingField = 'name';\n\n  nextQuestion =\n    \"What's your name?\";\n\n}\n\nelse if (!careerStage) {\n\n  missingField = 'career_stage';\n\n  nextQuestion =\n    `Nice to meet you, ${name}! 👋 What is your current career stage? For example: Student, Job Seeker, Working Professional, or Entrepreneur.`;\n\n}\n\nelse if (!challenge) {\n\n  missingField = 'challenge';\n\n  nextQuestion =\n    \"What is the main confidence challenge you're facing right now?\";\n\n}\n\nelse if (!goal) {\n\n  missingField = 'goal';\n\n  nextQuestion =\n    \"What is your main goal? What would you like to become more confident at?\";\n\n}\n\nelse {\n\n  missingField = '';\n\n  nextQuestion = '';\n\n  onboardingStep = 'completed';\n\n}\n\n\n// ==========================================\n// 10. FINAL OUTPUT\n// ==========================================\n\nreturn [\n  {\n    json: {\n\n      user_id: userId,\n\n      user_message: userMessage,\n\n      timestamp: timestamp,\n\n      user_status: 'existing_user',\n\n      name: name,\n\n      career_stage: careerStage,\n\n      challenge: challenge,\n\n      goal: goal,\n\n      onboarding_step: onboardingStep,\n\n      profile_complete: profileComplete,\n\n      missing_field: missingField,\n\n      next_question: nextQuestion\n\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -128
+      ],
+      "id": "c9f74289-1956-4935-a5ce-a667d0b50652",
+      "name": "🧠 Profile & Onboarding Manager"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Confidence Coach Agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Users_Profile"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "name": "={{ $json.name }}",
+            "career_stage": "={{ $json.career_stage }}",
+            "goal": "={{ $json.goal }}",
+            "challenge": "={{ $json.challenge }}",
+            "onboarding_step": "={{ $json.onboarding_step }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "career_stage",
+              "displayName": "career_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "challenge",
+              "displayName": "challenge",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "goal",
+              "displayName": "goal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "onboarding_step",
+              "displayName": "onboarding_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        -128
+      ],
+      "id": "1fb8f20b-db50-4e8e-bfbc-488b12299b6e",
+      "name": "💾 Save User Profile"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1a2d46a6-a603-4a7f-bee8-2d6dd6aaf74b",
+              "leftValue": "={{ $('🧠 Profile & Onboarding Manager').item.json.profile_complete }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        -128
+      ],
+      "id": "b88800f3-2270-4d37-b233-33fab4cef43a",
+      "name": "🔀 Profile Complete?"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You are an AI Confidence Coach.\n\nYour job is to help the user build confidence through practical coaching, reflection, and small actionable exercises.\n\nThe user's onboarding has already been completed.\n\nUSER PROFILE\n\nUser ID:\n{{ $json.user_id }}\n\nName:\n{{ $json.name }}\n\nCareer Stage:\n{{ $json.career_stage }}\n\nMain Challenge:\n{{ $json.challenge }}\n\nMain Goal:\n{{ $json.goal }}\n\nCURRENT USER MESSAGE:\n{{ $('🧠 Profile & Onboarding Manager').item.json.user_message }}\n\n\nCOACHING RULES\n\n1. Personalize your response using the user's profile.\n\n2. Focus on the user's current message, challenge, and goal.\n\n3. Give practical advice instead of generic motivational quotes.\n\n4. Break difficult problems into small actionable steps.\n\n5. Give no more than 1–2 practical actions at a time.\n\n6. Ask a follow-up question when it will improve the coaching.\n\n7. Encourage practice and real-world action.\n\n8. Do not repeatedly ask for information already provided.\n\n9. Keep the response conversational and reasonably concise.\n\n10. Be direct, supportive, and realistic.\n\n11. Do not diagnose mental-health conditions.\n\n12. Do not claim to be a therapist or medical professional.\n\n13. If the user's question is unrelated to confidence, answer it naturally and redirect toward their development when appropriate.\n\nRESPONSE STYLE\n\n- Personalized\n- Practical\n- Direct\n- Supportive\n- Conversational\n- Action-oriented\n\nA good response should generally contain:\n\n1. Brief acknowledgment\n2. Useful insight or advice\n3. One practical action\n4. A follow-up question when useful\n\nDo not use excessive motivational clichés."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        -224
+      ],
+      "id": "c3a43cdb-1a25-4df7-b8c0-59c0db808a67",
+      "name": "🤖 AI Confidence Coach"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Confidence Coach Agent"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1691402474,
+          "mode": "list",
+          "cachedResultName": "Conversation_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $('🧠 Profile & Onboarding Manager').item.json.user_id }}",
+            "message": "={{ $('🧠 Profile & Onboarding Manager').item.json.user_message }}",
+            "response": "={{ $json.output[0].content[0].text }}",
+            "timestamp": "={{ $('🧠 Profile & Onboarding Manager').item.json.timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "response",
+              "displayName": "response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1216,
+        -224
+      ],
+      "id": "eddf4740-4845-498c-b4c0-8738a0782038",
+      "name": "📝 Log Conversation"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "\"Hi! 👋 I'm your AI Confidence Coach. What's your name?\"",
+        "options": {
+          "responseMode": "responseNodes"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -352,
+        -128
+      ],
+      "id": "da80a18c-f5c8-4a42-865c-c8214427b7dc",
+      "name": "Chat Trigger"
+    },
+    {
+      "parameters": {
+        "message": "={{ $('🧠 Profile & Onboarding Manager').item.json.next_question }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        16
+      ],
+      "id": "bd2dc0f8-72f6-486b-b3f8-3697d1d65e30",
+      "name": "Ask Onboarding Question"
+    },
+    {
+      "parameters": {
+        "message": "={{ $json.response }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        -224
+      ],
+      "id": "59908d63-d9e9-45a2-945e-eb3bf6358af2",
+      "name": "Send Coach Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "🧩 Extract Chat Input": {
+      "main": [
+        [
+          {
+            "node": "🔎 Find User Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔎 Find User Profile": {
+      "main": [
+        [
+          {
+            "node": "🧠 Profile & Onboarding Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🧠 Profile & Onboarding Manager": {
+      "main": [
+        [
+          {
+            "node": "💾 Save User Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "💾 Save User Profile": {
+      "main": [
+        [
+          {
+            "node": "🔀 Profile Complete?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Profile Complete?": {
+      "main": [
+        [
+          {
+            "node": "🤖 AI Confidence Coach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask Onboarding Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🤖 AI Confidence Coach": {
+      "main": [
+        [
+          {
+            "node": "📝 Log Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📝 Log Conversation": {
+      "main": [
+        [
+          {
+            "node": "Send Coach Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "🧩 Extract Chat Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
