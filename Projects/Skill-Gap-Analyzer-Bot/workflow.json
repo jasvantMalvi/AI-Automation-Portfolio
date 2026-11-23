@@ -1,0 +1,504 @@
+{
+  "name": "Skill Gap Analyzer Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🤖Skill Gap Analyzer Bot🤖",
+        "formDescription": "Upload your resume and enter your target job role and job description to analyze your current skills, identify skill gaps, and get personalized recommendations, roadmap and readiness score.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name"
+            },
+            {
+              "fieldLabel": "Email Address",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Target Job Role",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "AI Automation Specialist"
+                  },
+                  {
+                    "option": "AI Agent Developer"
+                  },
+                  {
+                    "option": "Data Analyst"
+                  },
+                  {
+                    "option": "Python Developer"
+                  },
+                  {
+                    "option": "Full Stack Developer"
+                  },
+                  {
+                    "option": "Machine Learning Engineer"
+                  },
+                  {
+                    "option": "Cybersecurity Analyst"
+                  },
+                  {
+                    "option": "Digital Marketing Specialist"
+                  },
+                  {
+                    "option": "UI/UX Designer"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Experience Level",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "0-1 Yrs"
+                  },
+                  {
+                    "option": "1-2 Yrs"
+                  },
+                  {
+                    "option": "3 or more Yrs"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Resume",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -320,
+        -128
+      ],
+      "id": "3a6f8b5f-e808-4e58-b180-99258d4a51cd",
+      "name": "On form submission"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -96,
+        -128
+      ],
+      "id": "8e511ec3-aa3d-48a5-9b17-665786057e49",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze this candidate for the target job.\n\nCANDIDATE RESUME:\n{{ $json.text }}\n\nTARGET JOB ROLE:\n{{ $('On form submission').item.json['Target Job Role'] }}\n\nEXPERIENCE LEVEL:\n{{ $('On form submission').item.json['Experience Level'] }}\n\n\nPerform the following analysis:\n\n1. Extract all relevant skills from the resume.\n\n2. Identify the skills from the resume that match the job requirements.\n\n3. Identify partial matches where the candidate has related or basic knowledge but lacks sufficient depth.\n\n4. Identify important skills and qualifications required by the job description that are missing from the resume.\n\n5. Identify relevant experience and project strengths.\n\n6. Calculate a Job Readiness Score from 0–100 using the scoring methodology defined in the system instructions.\n\n7. Give practical recommendations prioritized by importance.\n\n8. Create a learning roadmap:\n- Short Term: 0–1 month\n- Medium Term: 1–3 months\n- Long Term: 3–6 months\n\n9. Give a final assessment:\n- Job Ready\n- Nearly Job Ready\n- Needs Improvement\n- Not Ready Yet\n\nBe specific to this job description. Do not provide generic career advice.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a professional Skill Gap Analyzer.\n\nYour job is to objectively evaluate a candidate's resume against a target job role and its job description.\n\nFollow these rules strictly:\n\n1. Extract only skills, technologies, tools, qualifications, experience and strengths that are supported by the resume.\n\n2. Do not assume that the candidate knows a technology simply because it is common for the target role.\n\n3. USER SKILLS:\nReturn all relevant technical and professional skills explicitly supported by the resume.\n\n4. MATCHING SKILLS:\nReturn only skills from the candidate's resume that directly match requirements of the target job.\n\n5. MISSING SKILLS:\nReturn important requirements from the job description that are not adequately demonstrated in the resume.\n\n6. PARTIAL MATCHES:\nIdentify requirements where the candidate has related knowledge or basic exposure but does not demonstrate sufficient depth.\n\n7. EXPERIENCE GAP:\nCompare the candidate's stated experience level with the experience expected by the job.\n\n8. READINESS SCORE:\nCalculate a score from 0 to 100 using this framework:\n- Required skills match: 40%\n- Relevant experience and projects: 25%\n- Technical/tools match: 20%\n- Education/qualifications: 10%\n- Additional relevant strengths: 5%\n\n9. Do not give credit for skills that are only mentioned indirectly or assumed from another skill.\n\n10. Recommendations must prioritize the most important missing skills instead of giving generic career advice.\n\n11. The roadmap must be practical and divided into:\n- Short Term: 0–1 month\n- Medium Term: 1–3 months\n- Long Term: 3–6 months\n\n12. Keep the analysis professional, specific, evidence-based and concise.\n\n13. Never invent information that is not present in the resume or job description.\n\nReturn only the requested structured output."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        128,
+        -128
+      ],
+      "id": "4b6fad35-f3a6-43a5-a0ea-cff0df943f23",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        64
+      ],
+      "id": "aba735ba-ade8-4614-a4de-ed4866d4c675",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"target_job_role\": \"AI Automation Specialist\",\n  \"experience_level\": \"0-1 Yrs\",\n  \"user_skills\": [\n    \"JavaScript\",\n    \"Python\",\n    \"SQL\",\n    \"n8n\",\n    \"Workflow Automation\",\n    \"Webhooks\",\n    \"REST APIs\",\n    \"Google Sheets\",\n    \"Gmail Integration\",\n    \"Generative AI\",\n    \"Prompt Engineering\",\n    \"AI APIs\",\n    \"MySQL\",\n    \"Postman\",\n    \"Git\",\n    \"GitHub\",\n    \"HTML\",\n    \"CSS\",\n    \"Problem Solving\",\n    \"Workflow Design\",\n    \"Logical Thinking\",\n    \"Quick Learning\",\n    \"Communication\"\n  ],\n  \"matching_skills\": [\n    \"Workflow automation using n8n\",\n    \"Webhooks and Google Sheets\",\n    \"JavaScript\",\n    \"Generative AI\",\n    \"AI APIs\",\n    \"Python and SQL\",\n    \"REST APIs\",\n    \"Git/GitHub\"\n  ],\n  \"missing_skills\": [\n    \"Docker\",\n    \"Cloud platforms\",\n    \"LangChain\",\n    \"Machine Learning\",\n    \"CI/CD\",\n    \"Advanced Python\",\n    \"System Design\",\n    \"Security\"\n  ],\n  \"recommendation\": \"Focus on Docker, cloud deployment, LangChain, advanced Python, CI/CD, and production-level AI automation.\",\n  \"roadmap\": {\n    \"short_term\": \"Learn Docker, advanced Python, REST APIs and production-ready n8n workflows.\",\n    \"medium_term\": \"Build AI agent projects using LangChain and vector databases and deploy them on a cloud platform.\",\n    \"long_term\": \"Develop skills in system design, CI/CD, monitoring, security and scalable AI automation.\"\n  },\n  \"readiness_score\": 70\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        48
+      ],
+      "id": "7fd9e5d9-17c6-4b2d-aa19-fddc2c058588",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Skill Gap Analyzer Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "NAME": "={{ $('AI Agent').item.json.output.name }}",
+            "EMAIL": "={{ $('AI Agent').item.json.output.email }}",
+            "TARGET JOB ROLE": "={{ $('AI Agent').item.json.output.target_job_role }}",
+            "EXPERIENCE LEVEL": "={{ $('AI Agent').item.json.output.experience_level }}",
+            "READINESS SCORE": "={{ $('AI Agent').item.json.output.readiness_score }}%",
+            "USER'S SKILLS": "={{ $('AI Agent').item.json.output.user_skills }}",
+            "MISSING SKILLS": "={{ $('AI Agent').item.json.output.missing_skills }}",
+            "RECOMMENDATION": "={{ $('AI Agent').item.json.output.recommendation }}",
+            "ROADMAP": "={{ $('AI Agent').item.json.output.roadmap }}",
+            "MATCHING SKILLS": "={{ $('AI Agent').item.json.output.matching_skills }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EMAIL",
+              "displayName": "EMAIL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TARGET JOB ROLE",
+              "displayName": "TARGET JOB ROLE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "EXPERIENCE LEVEL",
+              "displayName": "EXPERIENCE LEVEL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "USER'S SKILLS",
+              "displayName": "USER'S SKILLS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "MATCHING SKILLS",
+              "displayName": "MATCHING SKILLS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "MISSING SKILLS",
+              "displayName": "MISSING SKILLS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "RECOMMENDATION",
+              "displayName": "RECOMMENDATION",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ROADMAP",
+              "displayName": "ROADMAP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "READINESS SCORE",
+              "displayName": "READINESS SCORE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        496,
+        -128
+      ],
+      "id": "aea43827-4222-4380-90ab-fbfa61a95a3a",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('On form submission').item.json['Email Address'] }}",
+        "subject": "=Your Skill Gap Analysis Report – {{ $('On form submission').item.json['Target Job Role'] }}",
+        "message": "=<!DOCTYPE html> <html> <head>   <meta charset=\"UTF-8\">   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"> </head>  <body style=\"margin:0; padding:0; background:#f4f6f8; font-family:Arial, Helvetica, sans-serif; color:#263238;\">  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background:#f4f6f8; padding:30px 15px;\"> <tr> <td align=\"center\">  <table width=\"680\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:680px; width:100%; background:#ffffff; border-radius:12px; overflow:hidden;\">  <!-- HEADER --> <tr> <td style=\"background:#1f2937; padding:30px 35px;\">  <h1 style=\"margin:0; color:#ffffff; font-size:26px;\"> Skill Gap Analysis </h1>  <p style=\"margin:8px 0 0; color:#d1d5db; font-size:14px;\"> Your personalized career readiness report </p>  </td> </tr>   <!-- CANDIDATE INFO --> <tr> <td style=\"padding:30px 35px 15px;\">  <p style=\"margin:0 0 5px; font-size:14px; color:#6b7280;\"> Hello, </p>  <h2 style=\"margin:0 0 20px; font-size:22px; color:#111827;\"> {{ $('On form submission').item.json['Full Name'] }} </h2>  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">  <tr> <td style=\"padding:8px 0; font-size:14px;\"> <strong>Target Role:</strong> {{ $('On form submission').item.json['Target Job Role'] }} </td> </tr>  <tr> <td style=\"padding:8px 0; font-size:14px;\"> <strong>Experience Level:</strong> {{ $json['EXPERIENCE LEVEL'] }} </td> </tr>  </table>  </td> </tr>   <!-- READINESS SCORE --> <tr> <td style=\"padding:15px 35px 25px;\">  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px;\">  <tr> <td align=\"center\" style=\"padding:25px;\">  <p style=\"margin:0 0 8px; color:#6b7280; font-size:13px; text-transform:uppercase; letter-spacing:1px;\"> Job Readiness Score </p>  <div style=\"font-size:42px; font-weight:bold; color:#111827;\"> {{ $('AI Agent').item.json.output.readiness_score }}% </div>  <p style=\"margin:8px 0 0; color:#6b7280; font-size:13px;\"> Based on your resume and the requirements of your target role </p>  </td> </tr>  </table>  </td> </tr>   <!-- USER SKILLS --> <tr> <td style=\"padding:10px 35px;\">  <h2 style=\"font-size:18px; color:#111827; margin:0 0 12px;\"> Your Skills </h2>  <div style=\"background:#f8fafc; border-left:4px solid #374151; padding:15px; border-radius:6px; font-size:14px; line-height:1.7;\"> {{ $('AI Agent').item.json.output.user_skills }} </div>  </td> </tr>   <!-- MATCHING SKILLS --> <tr> <td style=\"padding:20px 35px 10px;\">  <h2 style=\"font-size:18px; color:#111827; margin:0 0 12px;\"> Skills Matching the Target Role </h2>  <div style=\"background:#f0fdf4; border-left:4px solid #16a34a; padding:15px; border-radius:6px; font-size:14px; line-height:1.7;\"> {{ $('AI Agent').item.json.output.matching_skills }} </div>  </td> </tr>   <!-- MISSING SKILLS --> <tr> <td style=\"padding:20px 35px 10px;\">  <h2 style=\"font-size:18px; color:#111827; margin:0 0 12px;\"> Skills to Develop </h2>  <div style=\"background:#fff7ed; border-left:4px solid #f97316; padding:15px; border-radius:6px; font-size:14px; line-height:1.7;\"> {{ $json['MISSING SKILLS'] }} </div>  </td> </tr>   <!-- RECOMMENDATION --> <tr> <td style=\"padding:20px 35px 10px;\">  <h2 style=\"font-size:18px; color:#111827; margin:0 0 12px;\"> Recommended Next Steps </h2>  <div style=\"background:#eff6ff; border-left:4px solid #2563eb; padding:15px; border-radius:6px; font-size:14px; line-height:1.7;\"> {{ $json.RECOMMENDATION }} </div>  </td> </tr>   <!-- ROADMAP --> <tr> <td style=\"padding:20px 35px 30px;\">  <h2 style=\"font-size:18px; color:#111827; margin:0 0 15px;\"> Your Learning Roadmap </h2>   <div style=\"border:1px solid #e5e7eb; border-radius:8px; padding:18px; margin-bottom:10px;\">  <strong style=\"font-size:15px; color:#111827;\"> Short Term </strong>  <p style=\"margin:8px 0 0; font-size:14px; line-height:1.7; color:#4b5563;\"> {{ $json.ROADMAP.short_term }} </p>  </div>   <div style=\"border:1px solid #e5e7eb; border-radius:8px; padding:18px; margin-bottom:10px;\">  <strong style=\"font-size:15px; color:#111827;\"> Medium Term </strong>  <p style=\"margin:8px 0 0; font-size:14px; line-height:1.7; color:#4b5563;\"> {{ $json.ROADMAP.medium_term }} </p>  </div>   <div style=\"border:1px solid #e5e7eb; border-radius:8px; padding:18px;\">  <strong style=\"font-size:15px; color:#111827;\"> Long Term </strong>  <p style=\"margin:8px 0 0; font-size:14px; line-height:1.7; color:#4b5563;\"> {{ $json.ROADMAP.long_term }} </p>  </div>  </td> </tr>   <!-- FOOTER --> <tr> <td style=\"background:#f8fafc; padding:22px 35px; border-top:1px solid #e5e7eb;\">  <p style=\"margin:0; font-size:12px; color:#6b7280; line-height:1.6;\"> This report was generated automatically by the Skill Gap Analyzer.  The assessment is based on the information provided in your resume and the selected job requirements. </p>  <p style=\"margin:12px 0 0; font-size:12px; color:#9ca3af;\"> Keep learning. Keep building. Keep improving. </p>  </td> </tr>  </table>  </td> </tr> </table>  </body> </html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        -128
+      ],
+      "id": "bcc9d8d7-807d-4867-86c5-38097f1b7550",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "content": "Collects candidate details, target role, experience level, job description, and resume.",
+        "height": 128,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -272
+      ],
+      "id": "8c95178d-2a61-4c27-93f7-168c080cecf3",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Extracts readable text and information from the uploaded resume PDF.",
+        "height": 112,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        -256
+      ],
+      "id": "ba743996-4396-42ab-8c5f-a86c31b8713f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Analyzes the resume against the target role and identifies skills, gaps, recommendations, and readiness.",
+        "height": 128,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        128,
+        -272
+      ],
+      "id": "1bcd2133-30a9-4463-a0ed-cb593c5a2925",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Provides the AI model used for resume and skill-gap analysis.",
+        "height": 96,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        32,
+        176
+      ],
+      "id": "f5e56a77-0348-4750-bc32-f27f9c7bab32",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Converts the AI analysis into a consistent structured JSON format.",
+        "height": 112,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        176
+      ],
+      "id": "c3c870a7-8d14-4f3e-bc7a-15f2aeb1d9b9",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Saves the candidate's complete skill-gap analysis in Google Sheets.",
+        "height": 96,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -240
+      ],
+      "id": "62700608-d075-404e-8369-ac795fe25541",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "Sends the personalized skill-gap report to the candidate by email.",
+        "height": 80,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        688,
+        -224
+      ],
+      "id": "361cfd70-23b4-4d6e-aa5f-216e720f3c1d",
+      "name": "Sticky Note6"
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
