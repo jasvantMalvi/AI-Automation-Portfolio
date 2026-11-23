@@ -69,6 +69,8 @@ Detailed project documentation will be added progressively.
 
 36. [AI-Powered Batch Schedule Management & Student Notification Agent](./AI-Powered-Batch-Schedule-Management-and-Student-Notification-Agent/) — Accepts administrator schedule-change requests through Telegram text or voice, uses ElevenLabs transcription and GPT-5 Mini to extract batch, date, new time and reason, calculates the revised end time from the existing duration, checks room/trainer conflicts, and prepares text and audio Telegram notifications. The README documents important defects in batch lookup, conflict detection, student message routing, and schedule update handling.
 
+37. [AI YouTube Shorts Generator Bot](./AI-YouTube-Shorts-Generator-Bot/) — Fetches AI and technology articles from TechCrunch RSS, aggregates the feed items, generates one 30–60 second YouTube Shorts script per article with GPT-5 Mini, validates the structured JSON output, and saves titles, hooks, scripts, endings, hashtags, and source metadata to Google Sheets. This project generates script drafts only; it does not render or publish videos. The README documents the single-source, no-deduplication, and unrelated trailing HTTP Request limitations.
+
 ## Technologies Used
 
 - n8n
