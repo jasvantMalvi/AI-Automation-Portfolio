@@ -1,0 +1,279 @@
+{
+  "name": "Smart Expence Tracking Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -128
+      ],
+      "id": "a04266d4-c3fd-4d78-b503-5a66a36aa417",
+      "name": "WhatsApp Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================\n// Expense Tracking Agent - Code Node\n// Purpose:\n// Extract expense details from WhatsApp message\n// ===========================================\n\n// Get incoming message\nconst message =\n  $json.messages?.[0]?.text?.body ||\n  $json.body ||\n  \"\";\n\n// -------------------------------------------\n// Date & Time\n// -------------------------------------------\nconst now = new Date();\n\nconst date = now.toLocaleDateString(\"en-GB\"); // DD/MM/YYYY\n\nconst time = now.toLocaleTimeString(\"en-IN\", {\n  hour: \"2-digit\",\n  minute: \"2-digit\",\n  second: \"2-digit\",\n  hour12: true\n});\n\n// -------------------------------------------\n// Amount\n// -------------------------------------------\nconst amountMatch = message.match(/(?:₹|Rs\\.?|INR)?\\s*([\\d,]+(?:\\.\\d{1,2})?)/i);\n\nconst amount = amountMatch\n  ? Number(amountMatch[1].replace(/,/g, \"\"))\n  : \"\";\n\n// -------------------------------------------\n// Currency\n// -------------------------------------------\nlet currency = \"INR\";\n\nif (/\\$/.test(message)) currency = \"USD\";\nelse if (/€/.test(message)) currency = \"EUR\";\nelse if (/£/.test(message)) currency = \"GBP\";\n\n// -------------------------------------------\n// Payment Method\n// -------------------------------------------\nlet paymentMethod = \"Unknown\";\n\nconst paymentMethods = {\n  \"Google Pay\": /gpay|google pay/i,\n  \"PhonePe\": /phonepe/i,\n  \"Paytm\": /paytm/i,\n  \"UPI\": /\\bupi\\b/i,\n  \"Credit Card\": /credit card/i,\n  \"Debit Card\": /debit card/i,\n  \"Card\": /\\bcard\\b/i,\n  \"Cash\": /\\bcash\\b/i,\n  \"Net Banking\": /net banking/i\n};\n\nfor (const [method, regex] of Object.entries(paymentMethods)) {\n  if (regex.test(message)) {\n    paymentMethod = method;\n    break;\n  }\n}\n\n// -------------------------------------------\n// Category Detection\n// -------------------------------------------\nconst categories = {\n  Food: [\"food\",\"restaurant\",\"pizza\",\"burger\",\"cafe\",\"coffee\",\"tea\",\"swiggy\",\"zomato\"],\n  Transport: [\"uber\",\"ola\",\"petrol\",\"diesel\",\"fuel\",\"bus\",\"train\",\"auto\",\"taxi\"],\n  Shopping: [\"shopping\",\"shirt\",\"shoe\",\"shoes\",\"clothes\",\"jeans\",\"amazon\",\"flipkart\",\"mall\"],\n  Grocery: [\"grocery\",\"vegetable\",\"fruit\",\"milk\",\"dmart\"],\n  Bills: [\"bill\",\"electricity\",\"wifi\",\"internet\",\"recharge\",\"mobile\"],\n  Entertainment: [\"movie\",\"cinema\",\"netflix\",\"spotify\",\"game\"],\n  Health: [\"medicine\",\"hospital\",\"doctor\",\"medical\",\"pharmacy\"],\n  Education: [\"course\",\"book\",\"fees\",\"college\",\"exam\"]\n};\n\nlet category = \"Others\";\n\nconst lowerMessage = message.toLowerCase();\n\nfor (const [cat, keywords] of Object.entries(categories)) {\n  if (keywords.some(word => lowerMessage.includes(word))) {\n    category = cat;\n    break;\n  }\n}\n\n// -------------------------------------------\n// Merchant / Item\n// -------------------------------------------\nlet merchant = message\n  .replace(/(?:₹|Rs\\.?|INR)?\\s*[\\d,]+(?:\\.\\d{1,2})?/gi, \"\")\n  .replace(/spent|paid|bought|purchase|for|on|using|via/gi, \"\")\n  .replace(/cash|upi|gpay|google pay|phonepe|paytm|credit card|debit card|card|net banking/gi, \"\")\n  .replace(/\\s+/g, \" \")\n  .trim();\n\nif (!merchant) merchant = \"Unknown\";\n\n// -------------------------------------------\n// Status\n// -------------------------------------------\nconst status = amount ? \"Recorded\" : \"Need Confirmation\";\n\n// -------------------------------------------\n// Output\n// -------------------------------------------\nreturn [\n  {\n    json: {\n      date,\n      time,\n      original_message: message,\n      amount,\n      currency,\n      category,\n      merchant,\n      payment_method: paymentMethod,\n      status\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        -128
+      ],
+      "id": "26426799-3aac-4946-9e88-f19d23c5d3e1",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Expense Tracking Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "time": "={{ $json.time }}",
+            "original_message": "={{ $json.original_message }}",
+            "amount": "={{ $json.amount }}",
+            "currency": "={{ $json.currency }}",
+            "category": "={{ $json.category }}",
+            "merchant": "={{ $json.merchant }}",
+            "payment_method": "={{ $json.payment_method }}",
+            "status": "={{ $json.status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "original_message",
+              "displayName": "original_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "currency",
+              "displayName": "currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "merchant",
+              "displayName": "merchant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        144,
+        -128
+      ],
+      "id": "e63a7426-e69c-4bdc-8030-f7a67f38ff56",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===========================================\n// Expense Tracking Agent\n// Calculate Total Expenses & Generate Summary\n// ===========================================\n\n// Get all rows from Google Sheets\nconst rows = $input.all();\n\nlet totalExpense = 0;\nlet totalTransactions = 0;\n\nconst expenseList = [];\n\n// Process each row\nfor (const item of rows) {\n\n    const data = item.json;\n\n    const amount = Number(data.amount) || 0;\n\n    totalExpense += amount;\n    totalTransactions++;\n\n    expenseList.push(\n        `• ${data.date} | ${data.category} | ₹${amount}`\n    );\n}\n\n// Format total\nconst formattedTotal = totalExpense.toLocaleString(\"en-IN\");\n\n// Prepare WhatsApp Message\nconst whatsappMessage = `💰 *Expense Summary*\n\n━━━━━━━━━━━━━━━━━━\n\n📊 Total Transactions : ${totalTransactions}\n\n💵 Total Expenses : ₹${formattedTotal}\n\n━━━━━━━━━━━━━━━━━━\n\n🧾 *Expense History*\n\n${expenseList.join(\"\\n\")}\n\n━━━━━━━━━━━━━━━━━━\n\n✅ Your expenses have been updated successfully.`;\n\nreturn [\n  {\n    json: {\n      total_transactions: totalTransactions,\n      total_expenses: totalExpense,\n      whatsapp_message: whatsappMessage\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        -128
+      ],
+      "id": "ae91f0eb-7ef8-43c5-8170-4a77a605f2cf",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Expense Tracking Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        352,
+        -128
+      ],
+      "id": "fbeef5e1-eecb-44dd-a3ac-c622e31a606d",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "={{ $json.whatsapp_message }}\n\n💡 Tip: Shopping accounts for a significant portion of your spending this month. Track discretionary purchases to stay within your budget.\n\nThank you for using Expense Tracking Agent! 😊",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -128
+      ],
+      "id": "6825f98b-c7a4-413c-aa82-3df02ac405dc",
+      "name": "Send message"
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
