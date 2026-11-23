@@ -1,0 +1,135 @@
+{
+  "name": "AI Image Generator Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -240,
+        -64
+      ],
+      "id": "eba628f7-aa18-4d67-8512-80a8d520b541",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-image-1-mini"
+        },
+        "prompt": "=Create a modern social media post about:\n\n{{ $json.output[0].content[0].text }}\n\n\n\nDesign Style:\n- Premium and modern\n- Clean layout\n- Professional typography\n- Eye-catching composition\n- Trending 2026 social media design\n- Minimalist aesthetic\n- High-quality visuals\n- Corporate and creative\n- Gradient effects\n- Soft shadows\n- Modern UI elements\n- Professional color palette\n- Instagram and LinkedIn ready\n- 1:1 square format\n- Ultra HD quality\n- No watermark",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        288,
+        -64
+      ],
+      "id": "57554493-880a-4dfe-991d-128ffa0c45f9",
+      "name": "Generate an image"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Create a professional  post about:\n{{ $json.message.text }}\n\n\nInclude:\n- Hook\n- Main Content\n- CTA\n- 5 Hashtags"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        -48,
+        -64
+      ],
+      "id": "2cc1d930-84a9-43d0-8d48-2f176b1464a2",
+      "name": "Message a model"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Telegram Trigger').item.json.message.text }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        496,
+        -64
+      ],
+      "id": "42352761-782a-4367-886c-bd9170e4835a",
+      "name": "Upload file"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
