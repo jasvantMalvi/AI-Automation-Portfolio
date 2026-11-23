@@ -1,0 +1,238 @@
+{
+  "name": "AI Powered Tasks Generator Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ab205e98-40b6-4308-861d-021c47a38494",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemMessage": "You are an Intelligent Task Planning Agent.\n\n\nYour role is to convert ANY user request (study, travel, shopping, business, health, personal, etc.) into a clear, structured, and actionable task plan.\n\n\n----------------------------------\n\n\n🎯 CORE RESPONSIBILITIES:\n\n\n- Understand the user’s goal, intent, and context\n- Break the goal into simple, practical, executable tasks\n- Organize tasks in a logical sequence\n- Adapt the plan based on:\n  - Time (urgent / short-term / long-term)\n  - Complexity (simple / detailed)\n  - Category (study / travel / shopping / work / health / personal)\n\n\n----------------------------------\n\n\n🧠 SMART PLANNING RULES:\n\n\n- Always break the goal into step-by-step tasks\n- Use day-wise planning if tasks span multiple steps\n- If small task → give single-day plan\n- If big goal → divide into Day 1, Day 2, Week-wise plan\n- Keep each task:\n  - Short\n  - Clear\n  - Actionable (start with a verb)\n\n\n----------------------------------\n\n\n🌍 MULTI-DOMAIN HANDLING:\n\n\nHandle all types of requests including:\n\n\n- Study (exam prep, learning skills)\n- Travel (trip planning, packing, booking)\n- Shopping (clothes, gadgets, orders)\n- Work / Business tasks\n- Health / Fitness\n- Daily productivity\n\n\n----------------------------------\n\n\n📊 TASK STRUCTURE RULES:\n\n\nEach task MUST include:\n- task_title\n- description\n- priority (High / Medium / Low)\n- estimated_time\n- deadline (Day-wise or date)\n- category\n\n\n----------------------------------\n\n\n⚡ OUTPUT FORMAT (STRICT JSON ONLY):\n\n\n{\n  \"tasks\": [\n    {\n      \"task_title\": \"\",\n      \"description\": \"\",\n      \"priority\": \"High/Medium/Low\",\n      \"estimated_time\": \"\",\n      \"deadline\": \"\",\n      \"category\": \"\"\n    }\n  ]\n}\n\n\n----------------------------------\n\n\n🚫 OUTPUT RULES (VERY IMPORTANT):\n\n\n- Do NOT explain anything\n- Do NOT add extra text\n- Do NOT use emojis\n- Do NOT give suggestions outside tasks\n- ONLY return valid JSON\n- No markdown, no comments\n\n\n----------------------------------\n\n\n🧩 ADVANCED LOGIC:\n\n\n- If user input is vague → expand into detailed structured plan\n- If deadline is given → distribute tasks accordingly\n- If multiple goals → group tasks separately\n- If recurring task → mention frequency in description\n\n\n----------------------------------\n\n\n❌ AVOID:\n\n\n- Generic tasks like \"Work on project\"\n- Long paragraphs\n- Missing fields\n- Invalid JSON\n\n\n----------------------------------\n\n\n✅ EXAMPLE INPUT:\n\"I want to prepare for interview in 5 days\"\n\n\n✅ OUTPUT:\n{\n  \"tasks\": [\n    {\n      \"task_title\": \"Revise core subjects\",\n      \"description\": \"Review key technical concepts required for interview\",\n      \"priority\": \"High\",\n      \"estimated_time\": \"2 hours\",\n      \"deadline\": \"Day 1\",\n      \"category\": \"Study\"\n    }\n  ]\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cf8a6397-a865-4966-8649-f6c554584cf5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        176
+      ],
+      "id": "32a39af3-080a-4cc3-b66a-5ed722a8ef91",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get raw output (string JSON from previous node)\nconst rawOutput = $json.output;\n\n\n// Parse JSON safely\nlet parsedData;\n\n\ntry {\n  parsedData = JSON.parse(rawOutput);\n} catch (error) {\n  throw new Error(\"Invalid JSON format in output\");\n}\n\n\n// Extract tasks array\nconst tasks = parsedData.tasks || [];\n\n\n// Convert tasks into structured output (for next node)\nreturn tasks.map((task, index) => {\n  return {\n    json: {\n      id: index + 1,\n      task_title: task.task_title,\n      description: task.description,\n      priority: task.priority,\n      estimated_time: task.estimated_time,\n      deadline: task.deadline,\n      category: task.category\n    }\n  };\n});\n\n\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "a61423a0-72fb-4091-8f33-ee421210ca15",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{\"✅Plan Generated Successfully\\n\\n📚 Goal: \" + $('Telegram Trigger').first().json.message.text + \"\\n\\n📝 Total Tasks Created: \" + $('Code in JavaScript').all().length + \"\\n\\nAll tasks have been saved to Google Sheets.\"}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        976,
+        0
+      ],
+      "id": "b2b61b5e-bf7d-4733-8804-f6bd11cd8a98",
+      "name": "Send a text message",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Task Generator Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 241591066,
+          "mode": "list",
+          "cachedResultName": "Sheet2"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "tasks": "={{ $json.task_title }}",
+            "Description": "={{ $json.description }}",
+            "Priority": "={{ $json.priority }}",
+            "Estimated Time": "={{ $json.estimated_time }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tasks",
+              "displayName": "tasks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estimated Time",
+              "displayName": "Estimated Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        768,
+        0
+      ],
+      "id": "dc88edab-a70b-4ccc-a210-54066bbaa1a7",
+      "name": "Append row in sheet"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
