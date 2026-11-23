@@ -75,6 +75,8 @@ Detailed project documentation will be added progressively.
 
 39. [AI Study Planner Bot](./AI-Study-Planner-Bot/) — Receives structured study requests through Telegram, extracts student details and preferences with JavaScript, and uses Claude Sonnet 5 to generate a personalized plan with an exam countdown, daily timetable, weekly subject plan, revision, practice, and final-days guidance. Converts the response into a styled HTML document and sends it back to the student's Telegram chat. The README documents input validation, AI date/hour calculation limitations, and the absence of reminders, calendar integration, and progress tracking.
 
+40. [AI Confidence Coach Agent](./AI-Confidence-Coach-Agent/) — Uses an n8n chat workflow to onboard users by collecting their name, career stage, main confidence challenge, and goal; stores profiles in Google Sheets; and uses GPT-4o-mini to provide practical, personalized coaching responses. Completed exchanges are logged to a separate `Conversation_Log` sheet. The README documents identity/session persistence concerns, public-chat access considerations, and the fact that conversation logs are not retrieved as AI memory.
+
 ## Technologies Used
 
 - n8n
