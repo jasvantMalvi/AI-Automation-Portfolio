@@ -59,6 +59,8 @@ Detailed project documentation will be added progressively.
 
 31. [AI Powered Tasks Generator Bot](./AI-Powered-Tasks-Generator-Bot/) — Converts Telegram goals into structured task plans using an OpenAI-powered n8n AI Agent. Splits generated tasks into individual records and saves them to Google Sheets before sending a Telegram confirmation. The supplied workflow generates deadline and category fields but does not currently store them in the sheet.
 
+32. [Lead Follow-up Automation Bot](./Lead-Followup-Automation-Bot/) — Captures inbound WhatsApp enquiries, identifies new and existing leads by phone number, detects interest across six course options, tracks lead interactions in Google Sheets, and sends welcome or course-interest responses. The supplied workflow records a next follow-up date but does not yet send scheduled follow-up messages or handle the requested Yes/No confirmation state.
+
 ## Technologies Used
 
 - n8n
