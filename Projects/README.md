@@ -20,6 +20,7 @@ This folder contains practical projects built using n8n, AI agents, OpenAI APIs,
 Detailed project documentation will be added progressively.
 
 1. [Enterprise AI WhatsApp Support Chatbot](Enterprise-AI-WhatsApp-Support-Chatbot/README.md) — AI-powered customer support using n8n, WhatsApp, OpenAI and Airtable.
+
 2. [AI IT Help Desk and Incident Resolution Agent](AI-IT-Help-Desk-Incident-Resolution-Agent/README.md) — Automates IT support requests, AI issue classification, priority assessment, troubleshooting and incident escalation using n8n, OpenAI, Gmail and Google Sheets.
 3. [AI KYC Customer Verification](AI-KYC-Customer-Verification/README.md) — KYC document intake, identity checks, duplicate lookup, risk assessment and manual-review routing using n8n, Telegram and Google Sheets.
 4. [AI Invoice Analyzer Bot](AI-Invoice-Analyzer-Bot/README.md) — Automates invoice email intake, AI-powered data extraction, validation analysis, Google Sheets logging, and email report generation using n8n, Gmail, OpenAI, and JavaScript.
@@ -79,6 +80,10 @@ Detailed project documentation will be added progressively.
 
 41. [Telegram AI Assistant](./Telegram-AI-Assistant/) — A text-based Telegram chatbot built with n8n and GPT-5 Mini. It generates general-purpose conversational answers and sends each response both to the originating Telegram user and to a configured Gmail inbox. The workflow supports multilingual responses through its prompt. The README documents its fixed email-copy behaviour, lack of conversation memory and live web search, and text-only input handling.
 
+42. [Smart Grocery Budget Optimization Bot](./Smart-Grocery-Budget-Optimization-Bot/) — A Telegram grocery-planning assistant that accepts text and voice requests, classifies five intents, estimates grocery prices, recommends budget allocations, optimizes shopping lists, and prepares a budget-recovery report using n8n, GPT-5 Mini, JavaScript, and ElevenLabs. Price outputs are AI-generated estimates rather than verified live retail prices; the project README documents further validation and routing limitations.
+
+43. [Client Registration Form](./Client-Registration-Form/) — A three-step n8n enrollment workflow that captures applicant details through a form, appends or updates the Google Sheets record using Email Address as the matching key, and sends a personalized HTML welcome email through Gmail. The README documents the original `Cources` field spelling, number-based phone input, first-selected Gender value in the email, and the absence of admission approval or payment verification.
+
 ## Technologies Used
 
 - n8n
@@ -95,7 +100,3 @@ Detailed project documentation will be added progressively.
 ---
 
 *Each project will include its purpose, workflow architecture, tools, screenshots, and setup instructions where applicable.*
-
-42. [Smart Grocery Budget Optimization Bot](./Smart-Grocery-Budget-Optimization-Bot/) — A Telegram grocery-planning assistant that accepts text and voice requests, classifies five intents, estimates grocery prices, recommends budget allocations, optimizes shopping lists, and prepares a budget-recovery report using n8n, GPT-5 Mini, JavaScript, and ElevenLabs. Price outputs are AI-generated estimates rather than verified live retail prices; the project README documents further validation and routing limitations.
-
-43. [Client Registration Form](./Client-Registration-Form/) — A three-step n8n enrollment workflow that captures applicant details through a form, appends or updates the Google Sheets record using Email Address as the matching key, and sends a personalized HTML welcome email through Gmail. The README documents the original `Cources` field spelling, number-based phone input, first-selected Gender value in the email, and the absence of admission approval or payment verification.
