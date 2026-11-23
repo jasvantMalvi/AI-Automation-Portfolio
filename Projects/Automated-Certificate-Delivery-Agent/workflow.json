@@ -1,0 +1,644 @@
+{
+  "name": "Automated Certificate Delivery Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        -48
+      ],
+      "id": "daf3fc6d-5319-46f9-b4e0-5f400d671d87",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Certificate Delivery Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Certificate_Status",
+              "lookupValue": "Pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -112,
+        -48
+      ],
+      "id": "edfbe13a-7388-4294-9d61-797457ea9083",
+      "name": "Get row(s) in sheet",
+      "executeOnce": false,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "47385a2e-414b-45ce-9675-1889c4521b0e",
+              "name": "recipientID",
+              "value": "={{ $json.Recipient_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "4b73dd98-6e52-4770-be71-0ddd42f9e894",
+              "name": "fullName",
+              "value": "={{ $json.Full_Name }}",
+              "type": "string"
+            },
+            {
+              "id": "a5029cdb-8d95-41c4-b5af-bc350b703032",
+              "name": "email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "46e74277-eaa9-4909-aff5-bf20e592a019",
+              "name": "courseName",
+              "value": "={{ $json.Course_Name }}",
+              "type": "string"
+            },
+            {
+              "id": "254224c2-4c4a-4f52-adc2-b5bfd6005b07",
+              "name": "completionDate",
+              "value": "={{ $json.Completion_Date }}",
+              "type": "string"
+            },
+            {
+              "id": "5454e24c-3b60-4ea5-aaf6-971f614576ce",
+              "name": "certificateFileName",
+              "value": "={{ 'Certificate - ' + String($json.Full_Name).trim() + ' - ' + String($json.Recipient_ID).trim() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        80,
+        -48
+      ],
+      "id": "2c5964b3-e504-49a0-8d1d-03b475f54b16",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CERTIFICATE_TEMPLATE_ID",
+          "mode": "id"
+        },
+        "name": "={{ $json.certificateFileName }}",
+        "sameFolder": false,
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GENERATED_CERTIFICATES_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "Generated Certificates"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        528,
+        48
+      ],
+      "id": "32e108ae-ca49-4711-a1f5-5651f581f75f",
+      "name": "Copy file"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{FULL_NAME}}",
+              "replaceText": "={{ $('Edit Fields').item.json.fullName }}",
+              "matchCase": true
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{COURSE_NAME}}",
+              "replaceText": "={{ $('Edit Fields').item.json.courseName }}",
+              "matchCase": true
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{COMPLETION_DATE}}",
+              "replaceText": "={{ $('Edit Fields').item.json.completionDate }}",
+              "matchCase": true
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{RECIPIENT_ID}}",
+              "replaceText": "={{ $('Edit Fields').item.json.recipientID }}",
+              "matchCase": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        752,
+        48
+      ],
+      "id": "445853ca-efef-4406-961a-29f2aea7c2fc",
+      "name": "Update a document"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Copy file').item.json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "user",
+            "emailAddress": "={{ $('Edit Fields').item.json.email }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        976,
+        48
+      ],
+      "id": "0f57bd17-bbdd-4c56-ba0d-8ef60d0e340e",
+      "name": "Share file"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87984f25-f5ff-4cf7-b543-77b011e58994",
+              "name": "certificateId",
+              "value": "={{ $('Update a document').item.json.documentId }}",
+              "type": "string"
+            },
+            {
+              "id": "0cf7742c-7a6b-4ae2-99c0-b1a0ef9bd372",
+              "name": "certificateLink",
+              "value": "=https://docs.google.com/document/d/{{ $('Copy file').item.json.id }}/edit",
+              "type": "string"
+            },
+            {
+              "id": "6c37d4b3-c3a1-4aee-bcf6-2b063eb9125c",
+              "name": "recipientName",
+              "value": "={{ $('Edit Fields').item.json.fullName }}",
+              "type": "string"
+            },
+            {
+              "id": "453549d7-ea30-4f20-9709-b9c5e9f376d9",
+              "name": "=recipientEmail",
+              "value": "={{ $('Edit Fields').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "d61194cf-7b80-4360-b06a-d40c96e8c711",
+              "name": "courseName",
+              "value": "={{ $('Edit Fields').item.json.courseName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1200,
+        48
+      ],
+      "id": "e55b14d2-5cf7-4259-9d81-72a6bb0d87ea",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Edit Fields1').item.json.recipientEmail }}",
+        "subject": "=Your {{ $('Edit Fields1').item.json.courseName }} Certificate Is Ready",
+        "message": "=\n={{\n  (() => {\n    const d = $('Edit Fields1').item.json;\n\n    const esc = (v) => String(v ?? '').replace(/[&<>\"']/g, c => ({\n      '&': '&amp;',\n      '<': '&lt;',\n      '>': '&gt;',\n      '\"': '&quot;',\n      \"'\": '&#39;'\n    })[c]);\n\n    return `\n    <div style=\"margin:0;padding:30px 12px;background:#f3f5f9;font-family:Arial,sans-serif;color:#243047;\">\n      <div style=\"max-width:600px;margin:auto;background:#ffffff;border-radius:12px;overflow:hidden;\">\n\n        <div style=\"padding:26px 30px;background:#183153;color:#ffffff;\">\n          <h1 style=\"margin:0;font-size:23px;\">Your Certificate Is Ready!</h1>\n          <p style=\"margin:8px 0 0;font-size:14px;\">Course Completion Certificate</p>\n        </div>\n\n        <div style=\"padding:30px;\">\n          <p style=\"font-size:16px;\">Hello ${esc(d.recipientName)},</p>\n\n          <p style=\"font-size:15px;line-height:1.7;\">\n            Congratulations on successfully completing\n            <strong>${esc(d.courseName)}</strong>!\n            Your personalized certificate has been generated and is ready to view.\n          </p>\n\n          <div style=\"margin:26px 0;padding:20px;background:#f5f7fb;border:1px solid #e0e6ef;border-radius:8px;\">\n            <p style=\"margin:0 0 8px;font-size:12px;color:#65738a;\">CERTIFICATE DETAILS</p>\n            <p style=\"margin:0 0 12px;font-size:17px;font-weight:bold;\">\n              ${esc(d.recipientName)}\n            </p>\n            <p style=\"margin:0 0 8px;font-size:14px;\">\n              <strong>Course:</strong> ${esc(d.courseName)}\n            </p>\n            <p style=\"margin:0;font-size:14px;\">\n              <strong>Certificate ID:</strong> ${esc(d.certificateId)}\n            </p>\n          </div>\n\n          <p style=\"text-align:center;margin:30px 0;\">\n            <a href=\"${esc(d.certificateLink)}\"\n               style=\"display:inline-block;padding:14px 24px;background:#1d5fd0;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:bold;\">\n              View My Certificate\n            </a>\n          </p>\n\n          <p style=\"font-size:14px;line-height:1.7;\">\n            Please keep this link for your records. If you experience any\n            difficulty accessing your certificate, reply to this email for assistance.\n          </p>\n\n          <p style=\"font-size:14px;line-height:1.7;\">\n            Best regards,<br>\n            <strong>Certificate Administration Team</strong>\n          </p>\n        </div>\n\n        <div style=\"padding:16px 30px;background:#f7f8fa;color:#7a8597;font-size:12px;text-align:center;\">\n          This is an automated certificate delivery email.\n        </div>\n\n      </div>\n    </div>`;\n  })()\n}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1648,
+        48
+      ],
+      "id": "579f8196-bfa5-4632-8a62-5d1191d75dfd",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Certificate Delivery Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Recipient_ID": "={{ $('Edit Fields').item.json.recipientID }}",
+            "Certificate_Status": "Sent",
+            "Certificate_Link": "={{ $json.certificateLink }}",
+            "Error_Message": "Empty",
+            "Sent_At": "={{ $now.setZone('Asia/Kolkata').toFormat('yyyy-MM-dd HH:mm:ss') }}"
+          },
+          "matchingColumns": [
+            "Recipient_ID"
+          ],
+          "schema": [
+            {
+              "id": "Recipient_ID",
+              "displayName": "Recipient_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Full_Name",
+              "displayName": "Full_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Course_Name",
+              "displayName": "Course_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Completion_Date",
+              "displayName": "Completion_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Certificate_Status",
+              "displayName": "Certificate_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Certificate_Link",
+              "displayName": "Certificate_Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error_Message",
+              "displayName": "Error_Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sent_At",
+              "displayName": "Sent_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1424,
+        48
+      ],
+      "id": "b40799ee-e6d9-47a7-b318-6a7ec7171c57",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "content": "Manually starts the workflow and fetches all recipients with Pending certificate status from Google Sheets.",
+        "height": 336,
+        "width": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -160
+      ],
+      "id": "e31972d1-085d-40a0-b01e-6d99c7477d34",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Maps recipient details into consistent fields and processes each pending recipient individually.",
+        "height": 336,
+        "width": 390,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -160
+      ],
+      "id": "eaf1b729-9367-45a6-9a90-d6b08f4408bf",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Copies the Google Docs template into the destination folder and replaces placeholders with the recipient's personal and course details.",
+        "height": 368,
+        "width": 352,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        512,
+        -160
+      ],
+      "id": "6b499c73-681f-4485-b890-188aa2823221",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        304,
+        -48
+      ],
+      "id": "de71d39a-feaa-4c75-b0cb-8fed3164acc8",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "content": "Grants the recipient viewer access and generates the link to their individual certificate document.",
+        "height": 368,
+        "width": 352,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -160
+      ],
+      "id": "1c8d3c37-c004-40ba-ae6d-09a06bd72649",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Updates the recipient's Google Sheet record with the certificate link, delivery status, timestamp, and any errors.",
+        "height": 368,
+        "width": 224,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        -160
+      ],
+      "id": "3cae3e21-272c-486b-a979-712fbc7913e0",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Sends a personalized HTML Gmail message containing the recipient's name, course details, and certificate link.",
+        "height": 368,
+        "width": 176,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        -160
+      ],
+      "id": "cf39eedf-96cf-4e48-ab37-05de552987df",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
