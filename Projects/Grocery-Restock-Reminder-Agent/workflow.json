@@ -1,0 +1,273 @@
+{
+  "name": "Grocery Restock Reminder Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -32,
+        416
+      ],
+      "id": "9c9c1b18-494b-4820-b1e7-2d143825277c",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        192
+      ],
+      "id": "ffd59e65-9819-4686-9076-15d9b2e321ad",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5eff6ed0-5742-4c08-b3f0-671ad53a8c22",
+      "name": "Daily Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Grocery Restock Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ec5d81ce-51b9-4c71-a6bc-256e537a7c5f",
+      "name": "Fetch Grocery User Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all rows from the Google Sheet\nconst items = $input.all();\nconst today = new Date(); // Current date\n\nconst restockList = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  if (data.LastPurchaseDate && data.RestockDays) {\n    const lastDate = new Date(data.LastPurchaseDate);\n    const restockDays = parseInt(data.RestockDays, 10);\n    \n    // Calculate difference in days\n    const diffTime = Math.abs(today - lastDate);\n    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));\n    \n    // Check if restock is due\n    if (diffDays >= restockDays) {\n      restockList.push({\n        json: {\n          name: data.Name,\n          chatId: data.ChatId,\n          lastItem: data.LastItem,\n          daysPassed: diffDays,\n          restockDays: restockDays\n        }\n      });\n    }\n  }\n}\n\n// Return only users who need restock\nreturn restockList;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "95d7761d-843c-4804-8a0b-570adc4fcbb8",
+      "name": "Check Restock Eligibility"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Here is the user detail who needs a grocery restock:\n- User Name: {{ $json.name }}\n- Last Purchased Items: {{ $json.lastItem }}\n- Days Passed Since Last Purchase: {{ $json.daysPassed }} days\n- Expected Restock Cycle: {{ $json.restockDays }} days\n\nPlease write a personalized restock reminder message for this user.",
+        "options": {
+          "systemMessage": "You are an intelligent Grocery Restock Reminder Assistant. Your job is to generate friendly, polite, and catchy reminder messages for users whose grocery stock is about to finish or has finished based on their past purchase history.\n- Keep the message personalized using their name.\n- Mention the items they likely need to restock.\n- Keep it short, encouraging, and easy to read on Telegram."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        0
+      ],
+      "id": "9a83d1ec-cee0-48fb-89f8-567f7274cee3",
+      "name": "AI Grocery Reminder Agent"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "9b450ec1-a280-4f24-bc3c-b0bf46052258",
+      "name": "Send Telegram Reminder"
+    },
+    {
+      "parameters": {
+        "content": "Start the automation at the scheduled time.",
+        "height": 240,
+        "width": 198,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        -80
+      ],
+      "id": "fff6c105-9926-4acf-8d8d-7dc92a08517e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Collect customer purchase records from Google Sheets.",
+        "height": 240,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        176,
+        -80
+      ],
+      "id": "e38ef27a-7bf8-4e6f-88fe-a47c4f9cdc8c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Identify customers who need to restock their groceries.",
+        "height": 240,
+        "width": 198,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        400,
+        -80
+      ],
+      "id": "796acaa5-9186-435e-8125-00968a31a79d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Generate friendly, personalized grocery reminder messages.",
+        "height": 384,
+        "width": 352,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        608,
+        -80
+      ],
+      "id": "6a36bb4c-604f-4958-8f1e-9f4687bbe6c4",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Send the generated reminder directly to the customer.",
+        "height": 240,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        976,
+        -80
+      ],
+      "id": "ecf51092-98bd-4585-93ec-556b267d03a3",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Grocery Reminder Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Grocery User Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Grocery User Data": {
+      "main": [
+        [
+          {
+            "node": "Check Restock Eligibility",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Restock Eligibility": {
+      "main": [
+        [
+          {
+            "node": "AI Grocery Reminder Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Grocery Reminder Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
