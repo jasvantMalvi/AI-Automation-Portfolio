@@ -51,6 +51,8 @@ Detailed project documentation will be added progressively.
 
 27. [AI Email Generation Bot](./AI-Email-Generation-Bot/) — Generates professional email subjects and body content from an n8n form using an OpenAI-powered AI Agent. Stores generated emails and request details in Google Sheets, then sends the formatted email through Gmail.
 
+28. [Skill Gap Analyzer Bot](./Skill-Gap-Analyzer-Bot/) — Analyzes uploaded PDF resumes against a selected target role using n8n and OpenAI. Extracts skills, identifies matching and missing skills, generates a readiness score and personalized learning roadmap, stores the analysis in Google Sheets, and emails a formatted report through Gmail. The current form does not collect a full job description.
+
 ## Technologies Used
 
 - n8n
