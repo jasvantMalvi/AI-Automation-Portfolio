@@ -1,0 +1,1223 @@
+{
+  "name": "AI-Powered Batch Schedule Management & Student Notification Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -224,
+        -128
+      ],
+      "id": "3a58cbbe-9d84-4bdb-84ee-c142bb8ac0ab",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "64729323-8a3c-4339-a4c7-e333723639af",
+              "leftValue": "={{ $json.message.voice.file_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        0,
+        -128
+      ],
+      "id": "c48a4735-bf00-458b-998c-45e96833c56d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        -224
+      ],
+      "id": "450a6737-5538-4c4a-94d2-00af40667858",
+      "name": "Get a file"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "operation": "speechToText",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -224
+      ],
+      "id": "e7865620-9693-4cd6-914e-e2d4d4a9dea9",
+      "name": "Transcribe audio or video"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text =\n  $json.text ??\n  $json.transcript ??\n  $json.output ??\n  '';\n\nreturn [\n  {\n    json: {\n      user_input: String(text).trim(),\n      input_type: 'voice'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -224
+      ],
+      "id": "c54d5f4b-972a-40ed-9dbe-adc2a0da57da",
+      "name": "Normalize Voice Input"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.message?.text ?? '';\n\nreturn [\n  {\n    json: {\n      user_input: String(text).trim(),\n      input_type: 'text'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        64
+      ],
+      "id": "30146afa-6fb6-4b13-ace6-94508dfe22c5",
+      "name": "Normalize Text Input"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ \n'Current date: ' + $now.setZone('Asia/Kolkata').toFormat('yyyy-MM-dd') +\n'\\nAdmin request: ' + $json.user_input\n}}",
+        "options": {
+          "systemMessage": "\nYou are an AI Batch Schedule Management Assistant.\n\nYour job is to understand admin requests for changing batch schedules.\n\nExtract the following information:\n- intent\n- batch_name\n- new_time\n- date\n- reason\n\nSupported intents:\n- change_schedule\n- check_schedule\n- general_question\n\nRules:\n1. Never invent missing information.\n2. Return null for missing fields.\n3. Convert times into 24-hour HH:mm format.\n4. Convert dates into YYYY-MM-DD format.\n5. Understand natural language such as tomorrow, today and specific dates.\n6. Use the supplied current date to calculate relative dates.\n7. Do not assume an old time. The existing time will be retrieved from Google Sheets.\n8. If the user requests a schedule change but omits the batch name, date or new time, return null for that field.\n9. Return only valid JSON.\n\nOutput format:\n\n{\n  \"intent\": \"change_schedule\",\n  \"batch_name\": null,\n  \"new_time\": null,\n  \"date\": null,\n  \"reason\": null\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1200,
+        -48
+      ],
+      "id": "a957db98-5df5-4307-a56a-e06b5ebfc508",
+      "name": "AI Schedule Understanding",
+      "notesInFlow": false,
+      "retryOnFail": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1136,
+        160
+      ],
+      "id": "52d5014b-b63a-48a4-9489-2f83246dbd17",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst input = $input.first().json;\n\nconst raw = input.output ?? input.text ?? input.response ?? input;\n\nlet data;\n\nif (typeof raw === 'string') {\n  const cleaned = raw\n    .replace(/```json/gi, '')\n    .replace(/```/g, '')\n    .trim();\n\n  data = JSON.parse(cleaned);\n} else {\n  data = raw;\n}\n\nreturn [{\n  json: {\n    intent: data.intent ?? null,\n    batch_name: data.batch_name?.trim() ?? null,\n    new_time: data.new_time ?? null,\n    date: data.date ?? null,\n    reason: data.reason ?? null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -48
+      ],
+      "id": "e0c4d1f4-378b-4a87-903d-196cf07d52cf",
+      "name": "Parse Schedule Data"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Batch Schedule Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        -144
+      ],
+      "id": "ab07fc6a-8790-4b3c-85de-da0e54d6b275",
+      "name": "Get Existing Batch Schedule"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst request = $('Parse Schedule Data').first().json;\nconst existing = $input.first().json;\n\nfunction toMinutes(value) {\n  const match = String(value ?? '').trim().match(\n    /^(\\d{1,2})(?::(\\d{2}))?\\s*(AM|PM)?$/i\n  );\n\n  if (!match) throw new Error('Invalid time: ' + value);\n\n  let h = Number(match[1]);\n  const m = Number(match[2] ?? 0);\n  const period = (match[3] ?? '').toUpperCase();\n\n  if (m > 59 || h > 23 || h < 0) {\n    throw new Error('Invalid time: ' + value);\n  }\n\n  if (period) {\n    if (h < 1 || h > 12) throw new Error('Invalid 12-hour time');\n    if (period === 'PM' && h !== 12) h += 12;\n    if (period === 'AM' && h === 12) h = 0;\n  }\n\n  return h * 60 + m;\n}\n\nfunction formatTime(minutes) {\n  const h = Math.floor(minutes / 60) % 24;\n  const m = minutes % 60;\n\n  return String(h).padStart(2, '0') + ':' +\n         String(m).padStart(2, '0');\n}\n\nconst currentStart = toMinutes(existing.start_time);\nconst currentEnd = toMinutes(existing.end_time);\nconst newStart = toMinutes(request.new_time);\n\nconst duration = currentEnd - currentStart;\n\nif (duration <= 0) {\n  throw new Error('Invalid existing batch duration');\n}\n\nif (newStart + duration > 1440) {\n  throw new Error('New schedule exceeds the day');\n}\n\nconst newEnd = newStart + duration;\n\nreturn [{\n  json: {\n    ...existing,\n    requested_batch: request.batch_name,\n    current_time: formatTime(currentStart),\n    old_time: existing.start_time,\n    new_time: formatTime(newStart),\n    new_end_time: formatTime(newEnd),\n    normalized_date: request.date,\n    reason: request.reason,\n    actual_change: newStart !== currentStart\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -144
+      ],
+      "id": "f4cc6546-7a92-41e0-92c2-6f0f3114d934",
+      "name": "Compare Schedule Change"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Batch Schedule Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "batch_name",
+              "lookupValue": "={{ $json.batch_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2688,
+        -144
+      ],
+      "id": "e9c2523d-3b60-44b2-9ac3-35c152f74bde",
+      "name": "Find Affected Students"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst data = $input.first().json;\n\nconst date = String(data.normalized_date ?? '');\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {\n  throw new Error('Invalid schedule date');\n}\n\nreturn [{\n  json: {\n    ...data,\n    normalized_date: date\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        -144
+      ],
+      "id": "f8be1253-63b5-48c1-bc05-6c2205e392d3",
+      "name": "Normalize Schedule Date"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rows = $input.all();\nconst request = $('Compare Schedule Change').first().json;\n\nfunction toMinutes(value) {\n  const match = String(value ?? '').trim().match(\n    /^(\\d{1,2})(?::(\\d{2}))?\\s*(AM|PM)?$/i\n  );\n\n  if (!match) return null;\n\n  let h = Number(match[1]);\n  const m = Number(match[2] ?? 0);\n  const period = (match[3] ?? '').toUpperCase();\n\n  if (m > 59 || h > 23) return null;\n\n  if (period) {\n    if (h < 1 || h > 12) return null;\n    if (period === 'PM' && h !== 12) h += 12;\n    if (period === 'AM' && h === 12) h = 0;\n  }\n\n  return h * 60 + m;\n}\n\nconst requestedStart = toMinutes(request.new_time);\nconst requestedEnd = toMinutes(request.new_end_time);\n\nif (requestedStart === null || requestedEnd === null) {\n  throw new Error('Invalid requested schedule time');\n}\n\nconst conflicts = [];\n\nfor (const item of rows) {\n  const row = item.json;\n\n  // Ignore the batch being changed\n  if (\n    String(row.batch_name ?? '').trim().toLowerCase() ===\n    String(request.requested_batch ?? '').trim().toLowerCase()\n  ) {\n    continue;\n  }\n\n  const rowDate = String(row.date ?? '').slice(0, 10);\n\n  // Only compare schedules on the same date\n  if (rowDate !== request.normalized_date) continue;\n\n  const existingStart = toMinutes(row.start_time);\n  const existingEnd = toMinutes(row.end_time);\n\n  if (existingStart === null || existingEnd === null) continue;\n\n  // Check whether the time intervals overlap\n  const overlap =\n    requestedStart < existingEnd &&\n    requestedEnd > existingStart;\n\n  const sameRoom =\n    String(row.room ?? '').trim().toLowerCase() ===\n    String(request.room ?? '').trim().toLowerCase();\n\n  const sameTrainer =\n    String(row.trainer ?? '').trim().toLowerCase() ===\n    String(request.trainer ?? '').trim().toLowerCase();\n\n  if (overlap && (sameRoom || sameTrainer)) {\n    conflicts.push({\n      batch_name: row.batch_name,\n      start_time: row.start_time,\n      end_time: row.end_time,\n      trainer: row.trainer,\n      room: row.room\n    });\n  }\n}\n\nreturn [{\n  json: {\n    ...request,\n    conflict_found: conflicts.length > 0,\n    conflicts,\n    conflict_count: conflicts.length\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        -144
+      ],
+      "id": "866ba229-5198-44eb-b8b9-65dd27b15c9e",
+      "name": "Detect Schedule Conflict"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3f71b130-cc0b-4b0b-9e82-a1c2474106fc",
+              "leftValue": "={{ $json.conflict_found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3168,
+        -144
+      ],
+      "id": "15a654e4-9e65-49a0-aa73-df6c0e7de9d9",
+      "name": "Conflict Found"
+    },
+    {
+      "parameters": {
+        "jsCode": "const schedule = $('Compare Schedule Change').first().json;\n\n// Read student names from your Google Sheet's \"students\" column\nconst studentNames = String(schedule.students || '')\n  .split(',')\n  .map(name => name.trim())\n  .filter(name => name !== '');\n\nif (studentNames.length === 0) {\n  return [{\n    json: {\n      no_students_found: true,\n      message: 'No students found for this batch.'\n    }\n  }];\n}\n\nreturn studentNames.map(studentName => {\n  const message =\n`Hello ${studentName},\n\nYour batch schedule has been updated.\n\nBatch: ${schedule.batch_name}\nDate: ${schedule.normalized_date}\nPrevious Time: ${schedule.old_time}\nNew Time: ${schedule.new_time}\n\nReason: ${schedule.reason || 'Schedule adjustment'}\n\nPlease follow the updated schedule.\n\nRegards,\nTraining Administration`;\n\n  return {\n    json: {\n      student_name: studentName,\n      notification_message: message\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3552,
+        -48
+      ],
+      "id": "d0da79b0-b9ba-4d12-941b-0114fe59812c",
+      "name": "Prepare Student Notification"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.notification_message }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4016,
+        -48
+      ],
+      "id": "69de3972-2709-4a50-a979-b28946facddd",
+      "name": "Text Notification – Telegram"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "hpp4J3VqNfWAUOO0d1Us",
+          "mode": "list",
+          "cachedResultName": "Bella - Professional, Bright, Warm",
+          "cachedResultUrl": ""
+        },
+        "text": "={{ $('Prepare Student Notification').item.json.notification_message }}",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        4464,
+        -48
+      ],
+      "id": "d430531c-9353-46ce-964a-7aad8f1bbda6",
+      "name": "Convert text to speech"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Text Notification – Telegram').item.json.result.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4800,
+        -48
+      ],
+      "id": "436673a6-189b-41fc-b47a-9fbc0d7fc8bb",
+      "name": "Send an audio file"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Batch Schedule Spreadsheet"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Normalize Schedule Date').item.json.row_number }}",
+            "batch_id": "={{ $('Normalize Schedule Date').item.json.batch_id }}",
+            "batch_name": "={{ $('Normalize Schedule Date').item.json.batch_name }}",
+            "date": "={{ $('Normalize Schedule Date').item.json.date }}",
+            "start_time": "={{ $('Normalize Schedule Date').item.json.new_time }}",
+            "end_time": "={{ $('Normalize Schedule Date').item.json.new_end_time }}",
+            "students": "={{ $('Normalize Schedule Date').item.json.students }}",
+            "trainer": "={{ $('Normalize Schedule Date').item.json.trainer }}",
+            "room": "={{ $('Normalize Schedule Date').item.json.room }}",
+            "status": "Active - New schedule"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "batch_id",
+              "displayName": "batch_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "batch_name",
+              "displayName": "batch_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "start_time",
+              "displayName": "start_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "end_time",
+              "displayName": "end_time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "students",
+              "displayName": "students",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "trainer",
+              "displayName": "trainer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "room",
+              "displayName": "room",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5104,
+        -48
+      ],
+      "id": "b525bce5-3ed0-499d-aab6-e46176a95cf7",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "CwhRBWXzGAHq8TQ4Fs17",
+          "mode": "list",
+          "cachedResultName": "Roger - Laid-Back, Casual, Resonant",
+          "cachedResultUrl": ""
+        },
+        "text": "={{ $json.result.text }}",
+        "additionalOptions": {},
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        5648,
+        -48
+      ],
+      "id": "954c58ae-2d66-4195-b6c0-81732f3c47cf",
+      "name": "Confirmation Text to Speech"
+    },
+    {
+      "parameters": {
+        "operation": "sendAudio",
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5920,
+        -48
+      ],
+      "id": "a418d916-5cb1-474b-92e6-ee8793436dd8",
+      "name": "Send an audio file1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=⚠️ Schedule Conflict Detected! \n\nThe requested time conflicts with another batch. \nConflicting Batch: {{ $json.conflicts[0].batch_name }} \nTime: {{ $json.conflicts[0].start_time }} to {{ $json.conflicts[0].end_time }}\n\nPlease choose another time ",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3536,
+        -432
+      ],
+      "id": "07074f9d-7639-4b4b-8de1-ce36a3d9f217",
+      "name": "Send a text message1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "I couldn't process your schedule change. \nPlease provide: - Batch name - New time - Date  \n\nExample: Change Python batch to 2 PM tomorrow.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2032,
+        128
+      ],
+      "id": "618d1697-ebb5-4be3-8270-8415d04326c1",
+      "name": "Send a text message2"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=✅ Batch Schedule Updated Successfully!  Batch: {{ $('Compare Schedule Change').first().json.requested_batch }}  Date: {{ $('Compare Schedule Change').first().json.normalized_date }}  Previous Time: {{ $('Compare Schedule Change').first().json.old_time }}  New Time: {{ $('Compare Schedule Change').first().json.new_time }}  Student notifications have been processed.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        5360,
+        -48
+      ],
+      "id": "aa35a65e-fb8f-4879-a5e9-b9a1629fe821",
+      "name": "Send a text message3"
+    },
+    {
+      "parameters": {
+        "content": "Receives admin text or voice messages through Telegram.",
+        "height": 288,
+        "width": 224,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -224
+      ],
+      "id": "2de049da-578a-46b3-afa4-93199f238872",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Downloads voice messages and converts speech into text.",
+        "height": 224,
+        "width": 608,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        192,
+        -272
+      ],
+      "id": "38a0c1e9-6c1b-443c-8952-bb95a8b9aff8",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Extracts and normalizes the admin's typed message.",
+        "height": 240,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        0
+      ],
+      "id": "230527b8-bae7-4675-bea8-43df2077163c",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Identifies the requested batch, new time, date and reason.",
+        "height": 464,
+        "width": 400,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        -144
+      ],
+      "id": "cbe7bc73-9d2f-41f6-9e9d-5a5e542b99fa",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Converts AI output into structured JSON.",
+        "height": 288,
+        "width": 208,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        -144
+      ],
+      "id": "066c7f44-86c3-4a2b-8b23-75ca7f3ae040",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "Checks whether all mandatory schedule details are available.",
+        "height": 288,
+        "width": 192,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -144
+      ],
+      "id": "d08f4fab-d8b7-4a3d-b423-68febcf66432",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49303517-48af-46a2-992a-7021452f7ee5",
+              "leftValue": "={{ $json.intent }}",
+              "rightValue": "change_schedule",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "17f784ca-d4ac-42ee-be45-325624c305a7",
+              "leftValue": "={{ $json.batch_name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d7c8ff0d-fc64-4d97-b1aa-c423d7330c58",
+              "leftValue": "={{ $json.new_time }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ac574ac1-fd4b-4d85-85eb-af0f11020a6a",
+              "leftValue": "={{ $json.date }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        -48
+      ],
+      "id": "8af4f4e0-6932-4b4e-a14a-4ceb0c81edc5",
+      "name": "Request Validation"
+    },
+    {
+      "parameters": {
+        "content": "Retrieves the current batch schedule from Google Sheets.",
+        "height": 272,
+        "width": 192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -224
+      ],
+      "id": "f85a7c53-c525-4510-87ee-fd481eab4d0b",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "Calculates the new start time and end time using the existing duration.",
+        "height": 272,
+        "width": 208,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        -224
+      ],
+      "id": "d7f3153a-9b31-4487-9490-82b136ae3a0c",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "Validates the requested date format.",
+        "height": 272,
+        "width": 192,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        -224
+      ],
+      "id": "a820516a-4ac8-4e4d-be8b-39758238b993",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "Retrieves students belonging to the selected batch.",
+        "height": 272,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2640,
+        -224
+      ],
+      "id": "4c0b5abc-5fc1-4816-a8f0-7930fa994cd6",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "Checks overlapping schedules, trainer availability and room availability.",
+        "height": 272,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2864,
+        -224
+      ],
+      "id": "4f25a56f-9346-465e-8a37-51d73bac47cd",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "Stops the update if a scheduling conflict is detected.",
+        "height": 272,
+        "width": 208,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3104,
+        -224
+      ],
+      "id": "40975a94-074a-4874-ab7f-625adf2e7428",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "Creates personalized schedule-change messages.",
+        "height": 272,
+        "width": 192,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3504,
+        -144
+      ],
+      "id": "eb110f8c-91ef-41ba-b3e5-daecade39e6e",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "Sends schedule updates through Telegram.",
+        "height": 272,
+        "width": 224,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3952,
+        -128
+      ],
+      "id": "7086a10f-0a64-47b0-aba3-ecd66c44ec95",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "Converts the notification into audio.",
+        "height": 272,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4384,
+        -128
+      ],
+      "id": "140c781b-74c6-4b21-b545-31a97be2aded",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "Delivers the audio notification through Telegram.",
+        "height": 256,
+        "width": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4736,
+        -112
+      ],
+      "id": "1a474120-c90f-4ed8-9061-dee6f5f4b1df",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "Saves the revised batch schedule in Google Sheets.",
+        "height": 256,
+        "width": 256,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5008,
+        -112
+      ],
+      "id": "2a68ab41-dcad-4613-9142-759d3231b54c",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "Confirms the schedule update to the administrator.",
+        "height": 256,
+        "width": 736,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5312,
+        -112
+      ],
+      "id": "36e2c1c6-f527-46a1-985b-dbc9a513e6bb",
+      "name": "Sticky Note17"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Text Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe audio or video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe audio or video": {
+      "main": [
+        [
+          {
+            "node": "Normalize Voice Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Voice Input": {
+      "main": [
+        [
+          {
+            "node": "AI Schedule Understanding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Text Input": {
+      "main": [
+        [
+          {
+            "node": "AI Schedule Understanding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Schedule Understanding",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Schedule Understanding": {
+      "main": [
+        [
+          {
+            "node": "Parse Schedule Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Schedule Data": {
+      "main": [
+        [
+          {
+            "node": "Request Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Batch Schedule": {
+      "main": [
+        [
+          {
+            "node": "Compare Schedule Change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Schedule Change": {
+      "main": [
+        [
+          {
+            "node": "Normalize Schedule Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Affected Students": {
+      "main": [
+        [
+          {
+            "node": "Detect Schedule Conflict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Schedule Date": {
+      "main": [
+        [
+          {
+            "node": "Find Affected Students",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Schedule Conflict": {
+      "main": [
+        [
+          {
+            "node": "Conflict Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conflict Found": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Student Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Student Notification": {
+      "main": [
+        [
+          {
+            "node": "Text Notification – Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Notification – Telegram": {
+      "main": [
+        [
+          {
+            "node": "Convert text to speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert text to speech": {
+      "main": [
+        [
+          {
+            "node": "Send an audio file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an audio file": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmation Text to Speech": {
+      "main": [
+        [
+          {
+            "node": "Send an audio file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an audio file1": {
+      "main": [
+        []
+      ]
+    },
+    "Send a text message3": {
+      "main": [
+        [
+          {
+            "node": "Confirmation Text to Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Validation": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Batch Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
