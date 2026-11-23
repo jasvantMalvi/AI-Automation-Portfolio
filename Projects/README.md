@@ -57,6 +57,8 @@ Detailed project documentation will be added progressively.
 
 30. [Grocery Restock Reminder Agent](./Grocery-Restock-Reminder-Agent/) — Checks purchase history and restock cycles daily using n8n and Google Sheets, identifies customers whose groceries may need replenishing, generates personalized reminder messages with OpenAI, and sends them through Telegram. The supplied workflow currently has a fixed Telegram chat ID and no reminder-history update, both documented as limitations.
 
+31. [AI Powered Tasks Generator Bot](./AI-Powered-Tasks-Generator-Bot/) — Converts Telegram goals into structured task plans using an OpenAI-powered n8n AI Agent. Splits generated tasks into individual records and saves them to Google Sheets before sending a Telegram confirmation. The supplied workflow generates deadline and category fields but does not currently store them in the sheet.
+
 ## Technologies Used
 
 - n8n
