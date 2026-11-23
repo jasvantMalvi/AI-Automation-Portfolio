@@ -73,6 +73,8 @@ Detailed project documentation will be added progressively.
 
 38. [AI Voice Telegram Assistant](./AI-Voice-Telegram-Assistant/) — Receives Telegram voice messages, downloads and transcribes audio with ElevenLabs Speech-to-Text, generates context-aware responses using GPT-5 Mini and an n8n Conversation Memory node, converts responses into speech with ElevenLabs Text-to-Speech, and sends audio replies back to Telegram. Supports English, Hindi, Gujarati, and mixed-language responses through its AI prompt. The README documents the unstable memory session key and missing voice-message validation and error handling.
 
+39. [AI Study Planner Bot](./AI-Study-Planner-Bot/) — Receives structured study requests through Telegram, extracts student details and preferences with JavaScript, and uses Claude Sonnet 5 to generate a personalized plan with an exam countdown, daily timetable, weekly subject plan, revision, practice, and final-days guidance. Converts the response into a styled HTML document and sends it back to the student's Telegram chat. The README documents input validation, AI date/hour calculation limitations, and the absence of reminders, calendar integration, and progress tracking.
+
 ## Technologies Used
 
 - n8n
