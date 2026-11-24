@@ -80,14 +80,6 @@ Import the workflow into n8n and configure your own credentials, spreadsheet IDs
 - Review Google Sheets configurations, including ticket closure nodes, before running the workflow.
 - Human approval and escalation are included for issues requiring IT-team involvement.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
-
-*Building smarter workflows. Automating repetitive tasks. Solving real-world problems.*
 
 ---
 
@@ -100,3 +92,11 @@ Import the workflow into n8n and configure your own credentials, spreadsheet IDs
 ## Workflow Export
 
 [View sanitized n8n workflow](workflow.json)
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
