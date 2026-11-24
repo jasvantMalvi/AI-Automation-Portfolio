@@ -53,12 +53,6 @@ AI-Powered-Personal-Assistant-in-Telegram/
 - Configure your own credentials before importing and testing.
 - Never publish API keys, bot tokens, or private user data.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
 ## Project Files
 
@@ -69,3 +63,11 @@ AI-Powered-Personal-Assistant-in-Telegram/
 
 ![AI Powered Personal Assistant in Telegram](./screenshots/workflow-overview.png)
 
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
