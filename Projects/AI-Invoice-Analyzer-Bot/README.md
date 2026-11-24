@@ -96,12 +96,6 @@ Import the workflow and configure your own credentials, spreadsheet ID, and shee
 
 Use synthetic invoice data for public demonstrations. Never publish real customer names, email addresses, bank details, tax identifiers, or invoice attachments.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
 
 
 
@@ -114,3 +108,12 @@ Use synthetic invoice data for public demonstrations. Never publish real custome
 ## Workflow Export
 
 [View sanitized n8n workflow](workflow.json)
+
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
