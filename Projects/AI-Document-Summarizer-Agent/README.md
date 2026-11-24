@@ -54,12 +54,6 @@ AI-Document-Summarizer-Agent/
 - Configure your own credentials before importing and testing.
 - Never publish API keys, access tokens, or private documents.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
 ## Project Files
 
@@ -70,3 +64,10 @@ AI-Document-Summarizer-Agent/
 
 ![AI Document Summarizer Agent Workflow](./screensots/workflow-overview.jpeg)
 
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
