@@ -75,13 +75,13 @@ The current code uses `Asia/Kolkata` for every row. Although the sheet contains 
 ## Screenshots
 
 ### 1. n8n Workflow Architecture
-![Sleep Reminder Workflow](screenshots/workflow-overview.jpeg)
+![Sleep Reminder Workflow](screenshot/workflow-overview.jpeg)
 
 ### 2. Telegram Bedtime and Wake-up Reminders
-![Telegram Sleep Reminders](screenshots/telegram-sleep-reminders.jpeg)
+![Telegram Sleep Reminders](screenshot/telegram-sleep-reminders.jpeg)
 
 ### 3. Google Sheets Sleep Schedule
-![Sleep Schedule Sheet](screenshots/sleep-schedule-sheet.jpeg)
+![Sleep Schedule Sheet](screenshot/sleep-schedule-sheet.jpeg)
 
 ## Setup
 
