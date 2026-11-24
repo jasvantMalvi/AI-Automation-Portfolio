@@ -97,12 +97,6 @@ Import the workflow and configure your own credentials and spreadsheet reference
 
 Never publish API keys, OAuth tokens, private email addresses, spreadsheet IDs, or sensitive business information in the public workflow export.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
 ## Project Files
 
@@ -114,3 +108,10 @@ Never publish API keys, OAuth tokens, private email addresses, spreadsheet IDs, 
 ![AI Competitor Intelligence Agent Workflow](./screenshots/workflow-overview.jpeg)
 
 
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
