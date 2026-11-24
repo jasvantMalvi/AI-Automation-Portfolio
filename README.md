@@ -46,6 +46,21 @@ Start with the **[Project Index](./Projects/README.md)** to browse all 52 projec
 
 ---
 
+## Connect With Me
+
+<div align="center">
+
+<a href="https://github.com/jasvantMalvi">
+  <img src="https://img.shields.io/badge/GitHub-Follow%20Me-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Profile" />
+</a>
+<a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">
+  <img src="https://img.shields.io/badge/LinkedIn-Let's%20Connect-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn Profile" />
+</a>
+
+</div>
+
+---
+
 <div align="center">
 
 **Built through hands-on learning and experimentation in AI automation.**
