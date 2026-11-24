@@ -98,14 +98,6 @@ Import the workflow JSON into n8n and configure your own credentials, IDs, datab
 - Use test customer data when demonstrating the project.
 - The public workflow export must not contain API keys, access tokens, private IDs, personal customer information, or sensitive webhook details.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
-
-*Building smarter workflows. Automating repetitive tasks. Solving real-world problems.*
 
 ---
 
@@ -124,3 +116,12 @@ Import the workflow JSON into n8n and configure your own credentials, IDs, datab
 You can find the sanitized n8n workflow export here:
 
 [View workflow.json](workflow.json)
+
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
