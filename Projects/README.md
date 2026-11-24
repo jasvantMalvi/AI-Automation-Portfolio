@@ -1,12 +1,12 @@
 # AI Automation Portfolio — Project Directory
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Projects-51-2563eb?style=for-the-badge" alt="51 projects">
+  <img src="https://img.shields.io/badge/Projects-52-2563eb?style=for-the-badge" alt="52 projects">
   <img src="https://img.shields.io/badge/Primary%20Platform-n8n-ea4b71?style=for-the-badge&logo=n8n&logoColor=white" alt="n8n">
   <img src="https://img.shields.io/badge/Focus-AI%20%26%20Automation-0f766e?style=for-the-badge" alt="AI and automation">
 </p>
 
-A practical collection of **51 AI automation and agent projects** built around real workflow use cases: customer communication, business operations, data processing, productivity, education, content creation and more.
+A practical collection of **52 AI automation and agent projects** built around real workflow use cases: customer communication, business operations, data processing, productivity, education, content creation and more.
 
 Most projects use **n8n** to connect AI models with tools such as Google Sheets, Gmail, Telegram, WhatsApp, Airtable, cloud services and external APIs.
 
@@ -19,14 +19,14 @@ Most projects use **n8n** to connect AI models with tools such as Google Sheets,
 | Project area | Projects |
 |---|---:|
 | Customer Support & Communication | 10 |
-| Business Operations, Finance & HR | 11 |
+| Business Operations, Finance & HR | 12 |
 | Education, Career & Student Workflows | 9 |
 | Data, Documents & Research | 4 |
 | Marketing, Content & Creative Automation | 5 |
 | Personal Productivity & Lifestyle | 8 |
 | Grocery Planning & Consumer Utilities | 3 |
 | Healthcare Prototype | 1 |
-| **Total** | **51** |
+| **Total** | **52** |
 
 ## Project directory
 
@@ -55,7 +55,7 @@ Project IDs are kept stable to make it easier to refer to a project across this 
 | 07 | [Monthly Client Work & Billing Automation System](./Monthly-Client-Work-and-Billing-Automation-System/) | Tracks client work logs, calculates billing, generates PDF invoices, maintains report history and delivers reports through Telegram. |
 | 10 | [AI Maintenance Dispatch](./AI-Maintenance-Dispatch/) | A four-workflow maintenance prototype for request intake, issue analysis, technician matching and status validation; see its README for integration gaps. |
 | 15 | [Smart Business Analyst Bot](./Smart-Business-Analyst-Bot/) | Analyzes weekly sales, calculates KPIs, identifies trends, creates forecasts and risk insights, and delivers management reports with a Looker Studio dashboard. |
-| 16 | [Smart Bill Tracker & Alert Bot](./Smart-Bill-Tracker-and-Alert-Bot/) | Tracks bill due dates, identifies upcoming and overdue payments, filters paid bills and manages reminder history. |
+| 16 | [Smart Bill Tracker & Alert Bot](./Smart-Bill-Tracker-and-Alert-Bot/) | Tracks bill due dates, identifies upcoming and overdue payments, filters paid bills and manages reminder history. |\n| 52 | [WhatsApp Bill Manager – Inbound (Registration, Payments & AI Assistant)](./WhatsApp-Bill-Manager-Inbound-Registration-Payments-AI-Assistant/) | Handles WhatsApp bill-management conversations, opt-in/opt-out, invoice-image extraction with duplicate checks, bill lookups, user-reported payment updates and Google Sheets history. |
 | 20 | [AI Attendance Tracking Bot](./AI-Attendance-Tracking-Bot/) | Records student attendance from WhatsApp messages, captures date and time, checks duplicate daily entries and sends confirmations. |
 | 21 | [Office Holiday Notifier](./Office-Holiday-Notifier/) | Checks a Google Sheets holiday calendar and sends Gmail announcements when configured notification dates are approaching. |
 | 25 | [Smart Expense Tracking Bot](./Smart-Expense-Tracking-Bot/) | Extracts expense details from WhatsApp messages, records transactions in Google Sheets and sends expense summaries. |
@@ -156,7 +156,7 @@ Check each project folder for its actual contents; older or smaller projects may
 
 ### Portfolio inventory note
 
-The current `Projects/` directory contains **51 project folders**, matching the 51 entries in the original project list. 
+The current `Projects/` directory contains **52 project folders**, matching the 52 entries listed in this portfolio index. 
 ---
 
 <p align="center">
