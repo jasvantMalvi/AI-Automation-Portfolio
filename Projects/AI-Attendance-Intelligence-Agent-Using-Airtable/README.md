@@ -70,12 +70,6 @@ AI-Attendance-Intelligence-Agent-Using-Airtable/
 - Configure your own Airtable and OpenAI credentials before execution.
 - Do not publish API keys, access tokens, or private Airtable data.
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429/
 
 ## Project Files
 
@@ -87,3 +81,10 @@ AI-Attendance-Intelligence-Agent-Using-Airtable/
 ![AI Attendance Intelligence Agent Workflow](./screenshots/workflow-overview.png)
 
 
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
