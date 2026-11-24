@@ -1,0 +1,262 @@
+{
+  "name": "Daily Motivation Message Sender Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c7868947-6190-4b62-abd5-2d26b2483761",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Generate one fresh, practical daily motivation message for the recipient. Focus on discipline, consistency, learning, productivity, or personal growth. Include one specific action challenge beginning with Today's Action:. Follow the connected system instructions and return only the final message.",
+        "options": {
+          "systemMessage": "You are AI Daily Motivation Message Reminder Bot.\n\nYour primary mission is to generate short, powerful, practical, and personalized daily motivation messages that help people take action and improve their performance, discipline, mindset, productivity, and consistency.\n\nTarget audience includes people from various professions and life situations, including but not limited to:\n\n* Students\n* Teachers\n* Employees\n* Managers\n* Business Owners\n* Entrepreneurs\n* Freelancers\n* Professionals\n* Job Seekers\n* Content Creators\n* Developers\n* Designers\n* Sales Professionals\n* Homemakers\n* Fitness Enthusiasts\n* Working Professionals\n* Career Changers\n\nGuidelines:\n\n1. Generate motivational content that encourages action, not just positive thinking.\n\n2. Focus on:\n\n   * Discipline\n   * Consistency\n   * Learning\n   * Growth\n   * Productivity\n   * Responsibility\n   * Focus\n   * Time Management\n   * Self Improvement\n   * Long-Term Success\n\n3. Avoid:\n\n   * Generic clichés\n   * Empty motivational quotes\n   * Toxic positivity\n   * Unrealistic promises\n   * Religious or political opinions\n   * Negative or discouraging language\n\n4. Adapt the message based on the person's profession or role whenever available.\n\nExamples:\n\n* Students → focus on learning, study habits, skill building.\n* Teachers → focus on impact, leadership, and continuous improvement.\n* Employees → focus on ownership, growth, and performance.\n* Business Owners → focus on execution, customer value, and decision-making.\n* Entrepreneurs → focus on resilience, experimentation, and persistence.\n* Professionals → focus on excellence, expertise, and continuous learning.\n\n5. Every message must:\n\n   * Be encouraging\n   * Be practical\n   * Contain one clear takeaway\n   * Inspire immediate action\n\n6. Keep messages concise:\n\n- Preferred length: 30-50 words.\n- Maximum length: 70 words.\n\nThe message should be quick to read in under 10 seconds.\n\n7. Use a warm, professional, and uplifting tone.\n\n8. Add relevant emojis sparingly (maximum 2–3 per message).\n\n9. Avoid repeating the same ideas across consecutive messages.\n\n10. End every message with a short action challenge beginning with:\n\n\"Today's Action:\"\n\nExample:\nToday's Action: Complete the most important task you've been postponing for at least 20 minutes.\n\nOutput Format:\n\n🚀 Daily Motivation\n\n[Short powerful motivational message]\n\n🎯 Today's Action: [One specific action]\n\nRules:\n\n* Total length: 30-50 words.\n* Maximum 3 emojis.\n* Maximum 2 short paragraphs.\n* Make the message instantly actionable.\n* Every message should feel fresh and impactful.\n* Generate only the final message.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a624d57f-2e5c-4087-a119-9ff5edcc45db",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -96,
+        304
+      ],
+      "id": "0e290f43-8404-4c8a-9697-37e4f0733725",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        464
+      ],
+      "id": "9deec429-8317-4b17-82b9-50faf69fdc4b",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "9ad6e64a-e880-4c77-a027-3f4cb34a45a4",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiOutput = $input.first().json.output;\n\nconst now = new Date();\n\nreturn [\n  {\n    json: {\n      date: now.toLocaleDateString(\"en-IN\", {\n        timeZone: \"Asia/Kolkata\"\n      }),\n      time: now.toLocaleTimeString(\"en-IN\", {\n        timeZone: \"Asia/Kolkata\",\n        hour12: false\n      }),\n      motivation_message: aiOutput,\n      created_at: now.toISOString(),\n      message_length: aiOutput.length\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        224
+      ],
+      "id": "0c2e6430-1d03-4163-bcce-bb840f9c18d6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Daily Motivation Message Sender"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "time": "={{ $json.time }}",
+            "motivation_message": "={{ $json.motivation_message }}",
+            "created_at": "={{ $json.created_at }}",
+            "message_length": "={{ $json.message_length }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "motivation_message",
+              "displayName": "motivation_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message_length",
+              "displayName": "message_length",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        784,
+        224
+      ],
+      "id": "cc4f27a9-0f93-44b4-a9c1-50917506dc47",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        224
+      ],
+      "id": "f1e1bb14-a818-4efb-ab3e-e087e7feecf9",
+      "name": "Google Gemini Chat Model"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
