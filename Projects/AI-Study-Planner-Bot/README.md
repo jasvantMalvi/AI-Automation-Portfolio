@@ -188,3 +188,12 @@ AI-Study-Planner-Bot/
 ├── README.md
 └── workflow.json
 ```
+
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
