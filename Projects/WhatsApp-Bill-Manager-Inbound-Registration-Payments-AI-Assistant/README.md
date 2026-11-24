@@ -93,7 +93,6 @@ Use one Google spreadsheet with these four tabs. The packaged workflow's Google 
 
 Create the column headers exactly as shown. Keep WhatsApp numbers as **plain-text values** including the country code; do not let Google Sheets convert them into scientific notation.
 
-See [`docs/GOOGLE-SHEETS-STRUCTURE.md`](docs/GOOGLE-SHEETS-STRUCTURE.md) for the header rows in copy-ready form.
 
 ## Tech stack
 
