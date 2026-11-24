@@ -1,12 +1,12 @@
 # AI Automation Portfolio — Project Directory
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Projects-50-2563eb?style=for-the-badge" alt="50 projects">
+  <img src="https://img.shields.io/badge/Projects-51-2563eb?style=for-the-badge" alt="51 projects">
   <img src="https://img.shields.io/badge/Primary%20Platform-n8n-ea4b71?style=for-the-badge&logo=n8n&logoColor=white" alt="n8n">
   <img src="https://img.shields.io/badge/Focus-AI%20%26%20Automation-0f766e?style=for-the-badge" alt="AI and automation">
 </p>
 
-A practical collection of **50 AI automation and agent projects** built around real workflow use cases: customer communication, business operations, data processing, productivity, education, content creation and more.
+A practical collection of **51 AI automation and agent projects** built around real workflow use cases: customer communication, business operations, data processing, productivity, education, content creation and more.
 
 Most projects use **n8n** to connect AI models with tools such as Google Sheets, Gmail, Telegram, WhatsApp, Airtable, cloud services and external APIs.
 
@@ -20,13 +20,13 @@ Most projects use **n8n** to connect AI models with tools such as Google Sheets,
 |---|---:|
 | Customer Support & Communication | 10 |
 | Business Operations, Finance & HR | 11 |
-| Education, Career & Student Workflows | 8 |
+| Education, Career & Student Workflows | 9 |
 | Data, Documents & Research | 4 |
 | Marketing, Content & Creative Automation | 5 |
 | Personal Productivity & Lifestyle | 8 |
 | Grocery Planning & Consumer Utilities | 3 |
 | Healthcare Prototype | 1 |
-| **Total** | **50** |
+| **Total** | **51** |
 
 ## Project directory
 
@@ -75,6 +75,7 @@ Project IDs are kept stable to make it easier to refer to a project across this 
 | 36 | [AI-Powered Batch Schedule Management & Student Notification Agent](./AI-Powered-Batch-Schedule-Management-and-Student-Notification-Agent/) | Processes text or voice schedule-change requests, checks scheduling conflicts, updates batch details and prepares student notifications. |
 | 39 | [AI Study Planner Bot](./AI-Study-Planner-Bot/) | Turns Telegram study requests into personalized plans with timetables, weekly subject priorities, revision and exam preparation. |
 | 44 | [LinkedIn Job Alert Agent](./LinkedIn-Job-Alert-Agent/) | Reads job records from an existing Apify dataset, creates AI summaries, saves opportunities to Sheets and emails a daily digest. |
+| 51 | [Auto Presentation Generator Agent](./Auto-Presentation-Generator-Agent/) | Uses a form and GPT-5 Mini to generate structured six-slide content, copies and populates a Google Slides master template, logs presentation details in Google Sheets and emails the generated presentation link. The README documents the fixed six-slide prompt and other setup limitations. |
 
 ### Data, Documents & Research
 
@@ -155,8 +156,7 @@ Check each project folder for its actual contents; older or smaller projects may
 
 ### Portfolio inventory note
 
-The current `Projects/` directory contains **50 project folders**. The earlier master list also mentioned **Auto Presentation Generator Agent**, but there is no matching project folder in the repository at present, so it is not counted or linked as an uploaded project here.
-
+The current `Projects/` directory contains **51 project folders**, matching the 51 entries in the original project list. 
 ---
 
 <p align="center">
