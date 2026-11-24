@@ -164,4 +164,9 @@ The current `Projects/` directory contains **52 project folders**, matching the 
   <b>Built by Jasvant Malvi</b><br>
   <a href="https://github.com/jasvantMalvi">GitHub</a> ·
   <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+  <div align="center">
+
+*Learning by building. Improving through iteration. Automating real workflows.*
+
+</div>
 </p>
