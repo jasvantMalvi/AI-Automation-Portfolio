@@ -84,12 +84,6 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 - `workflow.json` — Sanitized n8n workflow export
 - `screenshots/` — Workflow architecture and test execution screenshots
 
-## Author
-
-**Jasvant Malvi**
-
-- GitHub: https://github.com/jasvantMalvi
-- LinkedIn: https://www.linkedin.com/in/jasvant-malvi-810305429
 
 ---
 
@@ -100,3 +94,12 @@ Never use real identity documents, Aadhaar numbers, PAN numbers, passport detail
 ## Workflow Export
 
 [View sanitized n8n workflow](workflow.json)
+
+
+## Author
+
+<p align="left">
+  <b>Jasvant Malvi</b><br>
+  <a href="https://github.com/jasvantMalvi">GitHub</a> ·
+  <a href="https://www.linkedin.com/in/jasvant-malvi-810305429/">LinkedIn</a>
+</p>
