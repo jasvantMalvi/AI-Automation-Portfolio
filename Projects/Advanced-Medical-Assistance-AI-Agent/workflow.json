@@ -1,0 +1,707 @@
+{
+  "name": "Advanced Medical Assistance AI Agent with Emergency Detection and Health Assessment",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Advanced Medical Assistance – Patient Health Assessment",
+        "formDescription": "Collect patient health information for preliminary AI-assisted assessment, symptom analysis, and emergency identification. This form does not provide a medical diagnosis or replace professional medical care. For emergencies, call 112 in India immediately.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Patient Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Age",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Gender",
+              "fieldType": "radio",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Male"
+                  },
+                  {
+                    "option": "Female"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Mobile Number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Main Symptoms",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Symptom Duration",
+              "placeholder": "e.g. 2 Days or 3 Months",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Pain Level",
+              "fieldType": "number",
+              "placeholder": "Enter pain level from 0 to 10",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Existing Medical Conditions",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Current Medications",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Allergies",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Emergency Symptoms",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Additional Information",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Consent to Process Data",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "I consent to the processing of my health information for preliminary assessment and medical review."
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -96,
+        0
+      ],
+      "id": "15c72f01-b9bb-4116-8c30-10a0f2d54bcd",
+      "name": "01 - Patient Health Assessment Form"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\n\nreturn items.map(item => {\n  const data = item.json;\n\n  // Generate patient case ID\n  const caseId = `MED-${Date.now()}`;\n\n  // Normalize emergency symptoms\n  const emergencySymptoms = String(data[\"Emergency Symptoms\"] || \"\")\n    .split(\",\")\n    .map(symptom => symptom.trim())\n    .filter(Boolean);\n\n  const emergencyKeywords = [\n    \"severe chest pain\",\n    \"difficulty breathing\",\n    \"unconsciousness\",\n    \"severe bleeding\",\n    \"stroke symptoms\",\n    \"severe allergic reaction\",\n    \"seizure\"\n  ];\n\n  const hasEmergencyRedFlag = emergencySymptoms.some(symptom =>\n    emergencyKeywords.some(keyword =>\n      symptom.toLowerCase().includes(keyword)\n    )\n  );\n\n  const painLevel = Number(data[\"Pain Level\"] || 0);\n\n  return {\n    json: {\n      case_id: caseId,\n      submitted_at: data.submittedAt || new Date().toISOString(),\n\n      patient_name: data[\"Patient Name\"] || \"\",\n      age: Number(data.Age || 0),\n      gender: data.Gender || \"\",\n      mobile_number: data[\"Mobile Number\"] || \"\",\n      email: data.Email || \"\",\n\n      main_symptoms: data[\"Main Symptoms\"] || \"\",\n      symptom_duration: data[\"Symptom Duration\"] || \"\",\n      pain_level: painLevel,\n\n      existing_medical_conditions:\n        data[\"Existing Medical Conditions\"] || \"None reported\",\n\n      current_medications:\n        data[\"Current Medications\"] || \"None reported\",\n\n      allergies: data.Allergies || \"None reported\",\n\n      emergency_symptoms: emergencySymptoms,\n      additional_information: data[\"Additional Information\"] || \"\",\n\n      consent_given: Boolean(\n        data[\"Consent to Process Data\"]?.length\n      ),\n\n      has_emergency_red_flag: hasEmergencyRedFlag,\n\n      processing_status: \"Ready for AI Assessment\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        0
+      ],
+      "id": "ecd0547c-9448-4ead-88c2-9639183aa195",
+      "name": "\t02 - Validate & Normalize Patient Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "5733ae35-1e33-43aa-a565-4f53f1f79f56",
+              "leftValue": "={{ $json.has_emergency_red_flag }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        368,
+        0
+      ],
+      "id": "fb55a6ec-7b2e-4b41-9704-3065cdfc2f1f",
+      "name": "03 - Initial Emergency Detection"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=\nYou are a medical assistance assessment system.\n\nAnalyze the patient record below.\n\nPATIENT RECORD:\n{{ JSON.stringify($json, null, 2) }}\n\nTASK:\n1. Summarize the reported symptoms.\n2. Identify possible health concerns without diagnosing.\n3. Classify urgency as Emergency, Urgent, or Standard.\n4. Explain the reason for the urgency classification.\n5. Recommend safe next steps.\n6. Require doctor review for every case.\n\nSTRICT RULES:\n- If has_emergency_red_flag is true, emergency_detected must be true.\n- Never downgrade an existing emergency flag.\n- Emergency cases must receive immediate emergency care instructions.\n- In India, recommend calling 112 for emergencies.\n- Never prescribe medication or dosage.\n- Never claim the patient is medically safe.\n- Never invent patient details.\n- assessment_status must be Pending Medical Review.\n- Return output matching the connected JSON schema.\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        608,
+        -96
+      ],
+      "id": "40c3eac7-d54e-448d-8c21-b77364f0de7a",
+      "name": "04 - AI Medical Assessment Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn $input.all().map(item => {\n  const raw = item.json.output || item.json;\n\n  // Handle structured output\n  const assessment = raw.properties || raw;\n\n  const urgency = String(\n    assessment.urgency_level?.type ||\n    assessment.urgency_level ||\n    \"Urgent\"\n  );\n\n  const emergencyDetected =\n    assessment.emergency_detected?.type === true ||\n    assessment.emergency_detected === true ||\n    urgency.toLowerCase() === \"emergency\";\n\n  return {\n    json: {\n      patient_name:\n        assessment.patient_name?.type ||\n        assessment.patient_name || \"\",\n\n      case_id:\n        assessment.case_id?.type ||\n        assessment.case_id || \"\",\n\n      symptom_summary:\n        assessment.symptom_summary?.type ||\n        assessment.symptom_summary || \"\",\n\n      urgency_level: emergencyDetected\n        ? \"Emergency\"\n        : [\"Urgent\", \"Standard\"].includes(urgency)\n          ? urgency\n          : \"Urgent\",\n\n      emergency_detected: emergencyDetected,\n\n      emergency_reason:\n        assessment.emergency_reason?.type ||\n        assessment.emergency_reason || \"\",\n\n      recommended_action:\n        assessment.recommended_action?.type ||\n        assessment.recommended_action || \"\",\n\n      doctor_review_required: true,\n\n      assessment_status: \"Pending Medical Review\"\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        -96
+      ],
+      "id": "d411ff09-a994-48f3-b752-5bdb6445c42e",
+      "name": "07 - Normalize AI Assessment"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        176
+      ],
+      "id": "7c950955-8023-4dae-af3e-12d525101cfa",
+      "name": "05 - OpenAI Assessment Model"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "7d86212e-f19b-4f8a-8478-db09587a0003",
+              "leftValue": "={{ $json.emergency_detected }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1200,
+        -96
+      ],
+      "id": "9f7ad70d-4a15-4c5f-9d4d-b2b4201925a6",
+      "name": "08 - Final Emergency Classification"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"patient_name\": {\"type\": \"string\"},\n    \"case_id\": {\"type\": \"string\"},\n    \"symptom_summary\": {\"type\": \"string\"},\n    \"urgency_level\": {\n      \"type\": \"string\",\n      \"enum\": [\"Emergency\", \"Urgent\", \"Standard\"]\n    },\n    \"emergency_detected\": {\"type\": \"boolean\"},\n    \"emergency_reason\": {\"type\": \"string\"},\n    \"recommended_action\": {\"type\": \"string\"},\n    \"doctor_review_required\": {\"type\": \"boolean\"},\n    \"assessment_status\": {\"type\": \"string\"}\n  },\n  \"required\": [\n    \"patient_name\",\n    \"case_id\",\n    \"symptom_summary\",\n    \"urgency_level\",\n    \"emergency_detected\",\n    \"emergency_reason\",\n    \"recommended_action\",\n    \"doctor_review_required\",\n    \"assessment_status\"\n  ]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        176
+      ],
+      "id": "97272f62-f836-442e-8ff4-c45c586fa83b",
+      "name": "06 - Medical Assessment JSON Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Advanced Medical Assistance Database"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Emergency Cases"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Case ID": "={{ $json.case_id }}",
+            "Patient Name": "={{ $json.patient_name }}",
+            "Urgency Level": "={{ $json.urgency_level }}",
+            "Symptom Summary": "={{ $json.symptom_summary }}",
+            "Emergency Detected": "={{ $json.emergency_detected }}",
+            "Emergency Reason": "={{ $json.emergency_reason }}",
+            "Recommended Action": "={{ $json.recommended_action }}",
+            "Doctor Review Required": "={{ $json.doctor_review_required }}",
+            "Assessment Status": "={{ $json.assessment_status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Patient Name",
+              "displayName": "Patient Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency Level",
+              "displayName": "Urgency Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Symptom Summary",
+              "displayName": "Symptom Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emergency Detected",
+              "displayName": "Emergency Detected",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emergency Reason",
+              "displayName": "Emergency Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Doctor Review Required",
+              "displayName": "Doctor Review Required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assessment Status",
+              "displayName": "Assessment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1504,
+        -336
+      ],
+      "id": "e13928fd-d1e4-4324-86a9-b2b16f368687",
+      "name": "09 - Save Emergency Case"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Advanced Medical Assistance Database"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1028993480,
+          "mode": "list",
+          "cachedResultName": "Standard Cases"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now.toISO() }}",
+            "Case ID": "={{ $json.case_id }}",
+            "Patient Name": "={{ $json.patient_name }}",
+            "Urgency Level": "={{ $json.urgency_level }}",
+            "Symptom Summary": "={{ $json.symptom_summary }}",
+            "Emergency Reason": "={{ $json.emergency_reason }}",
+            "Emergency Detected": "={{ $json.emergency_detected }}",
+            "Recommended Action": "={{ $json.recommended_action }}",
+            "Doctor Review Required": "={{ $json.doctor_review_required }}",
+            "Assessment Status": "={{ $json.assessment_status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Case ID",
+              "displayName": "Case ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Patient Name",
+              "displayName": "Patient Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency Level",
+              "displayName": "Urgency Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Symptom Summary",
+              "displayName": "Symptom Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emergency Reason",
+              "displayName": "Emergency Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Emergency Detected",
+              "displayName": "Emergency Detected",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Doctor Review Required",
+              "displayName": "Doctor Review Required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assessment Status",
+              "displayName": "Assessment Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1504,
+        112
+      ],
+      "id": "cb9994a3-3dfb-49b3-9ced-db3fa14dbb78",
+      "name": "\t10 - Save Non-Emergency Case"
+    },
+    {
+      "parameters": {
+        "content": "Collect patient information, symptoms, medical history, contact details, and consent through an n8n form.",
+        "height": 336,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -144
+      ],
+      "id": "d3c48148-88d2-4bd9-a236-ab1c8e54f4e1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Validate patient responses, normalize submitted data, generate a unique case ID, and identify emergency warning signs.",
+        "height": 336,
+        "width": 448,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        64,
+        -144
+      ],
+      "id": "ac672708-0310-443f-8b61-efd9401f790c",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Analyze patient symptoms using an AI language model and generate a structured preliminary health assessment with urgency classification.",
+        "height": 512,
+        "width": 352,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -176
+      ],
+      "id": "a7360c58-583b-4354-a9a8-6c68ba399479",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Normalize AI results, preserve emergency warning flags, and route emergency and non-emergency cases into separate processing branches.",
+        "height": 272,
+        "width": 416,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -176
+      ],
+      "id": "1d8fb4f7-6f8d-4c38-ae40-33fc275fb4f0",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "Store assessment results in separate Google Sheets tabs for emergency and non-emergency cases with pending medical review status.",
+        "height": 704,
+        "width": 368,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        -416
+      ],
+      "id": "4e95ace2-2dd1-40f9-9497-b1ea107f2fc8",
+      "name": "Sticky Note4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "01 - Patient Health Assessment Form": {
+      "main": [
+        [
+          {
+            "node": "\t02 - Validate & Normalize Patient Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "\t02 - Validate & Normalize Patient Data": {
+      "main": [
+        [
+          {
+            "node": "03 - Initial Emergency Detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 - Initial Emergency Detection": {
+      "main": [
+        [
+          {
+            "node": "04 - AI Medical Assessment Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 - AI Medical Assessment Chain": {
+      "main": [
+        [
+          {
+            "node": "07 - Normalize AI Assessment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 - Normalize AI Assessment": {
+      "main": [
+        [
+          {
+            "node": "08 - Final Emergency Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 - OpenAI Assessment Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "04 - AI Medical Assessment Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 - Final Emergency Classification": {
+      "main": [
+        [
+          {
+            "node": "09 - Save Emergency Case",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "\t10 - Save Non-Emergency Case",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 - Medical Assessment JSON Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "04 - AI Medical Assessment Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  }
+}
