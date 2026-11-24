@@ -1,0 +1,330 @@
+{
+  "name": "Birthday Reminder Automation Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -368,
+        -64
+      ],
+      "id": "720510ec-5198-4759-83a8-7e611f1b2767",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Birthday Reminder Bot"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -176,
+        -64
+      ],
+      "id": "b1f7f540-0b09-4cb9-8c21-08a06cfce5b7",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Birthday Reminder Bot\n// Mode: Run Once for All Items\n\nconst today = new Date();\n\n// Today's Month & Day\nconst todayMonth = String(today.getMonth() + 1).padStart(2, '0');\nconst todayDay = String(today.getDate()).padStart(2, '0');\n\n// Today's date (YYYY-MM-DD)\nconst todayDate = today.toISOString().split('T')[0];\n\nconst birthdayPeople = [];\n\nfor (const item of $input.all()) {\n\n  const person = item.json;\n\n  // Skip if Birthday is missing\n  if (!person[\"Birthday\"]) continue;\n\n  // Skip inactive contacts\n  if (\n    person[\"Status\"] &&\n    person[\"Status\"].toString().toLowerCase() !== \"active\"\n  ) {\n    continue;\n  }\n\n  // Skip if already wished today\n  if (\n    person[\"Birthday Wish Sent\"]?.toString().toLowerCase() === \"yes\" &&\n    person[\"Last Wish Date\"] === todayDate\n  ) {\n    continue;\n  }\n\n  // Parse birthday\n  const birthday = new Date(person[\"Birthday\"]);\n\n  if (isNaN(birthday.getTime())) continue;\n\n  const birthMonth = String(birthday.getMonth() + 1).padStart(2, '0');\n  const birthDay = String(birthday.getDate()).padStart(2, '0');\n\n  // Birthday Match\n  if (birthMonth === todayMonth && birthDay === todayDay) {\n\n    birthdayPeople.push({\n      json: {\n        row_number: person.row_number,\n        id: person.ID,\n        full_name: person[\"Full Name\"],\n        phone_number: person[\"Phone Number\"],\n        birthday: person[\"Birthday\"],\n        relationship: person[\"Relationship\"],\n        city: person[\"City\"],\n        status: person[\"Status\"],\n        birthday_wish_sent: person[\"Birthday Wish Sent\"],\n        last_wish_date: person[\"Last Wish Date\"],\n        today: todayDate,\n        occasion: \"Birthday\",\n        should_send_message: true\n      }\n    });\n\n  }\n}\n\nreturn birthdayPeople;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -64
+      ],
+      "id": "c7cd942b-7aa3-4432-a047-a06e1768e6b6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a premium WhatsApp birthday wish.\n\nRecipient Details:\n- Full Name: {{ $json.full_name }}\n- Relationship: {{ $json.relationship }}\n- City: {{ $json.city }}\n\nRequirements:\n- 40–60 words.\n- Mention only the recipient's first name.\n- Use 4–6 relevant emojis.\n- Spread emojis naturally throughout the message instead of grouping them together.\n- Avoid placing all emojis at the end.\n- Make the message feel like it was written by a thoughtful human.\n- Return only the birthday message.",
+        "options": {
+          "systemMessage": "You are an expert Birthday Wishes Assistant that creates short, warm, and heartfelt birthday messages for WhatsApp.\n\nYour task is to generate a unique birthday wish based on the recipient's information.\n\nRules:\n- Write in a friendly, genuine, and cheerful tone.\n- Keep the message between 40 and 60 words.\n- Include 3–5 relevant emojis naturally (such as 🎉🎂🎈🥳🎁✨😊💖).\n- Mention the recipient's first name naturally.\n- Wish them happiness, good health, success, prosperity, and memorable moments.\n- Make every message unique. Avoid repeating the same wording or sentence structure.\n- Do not use markdown, bullet points, hashtags, quotes, greetings like \"Dear\", or signatures.\n- Do not mention AI or that you generated the message.\n- Return only the birthday wish text and nothing else."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        240,
+        -64
+      ],
+      "id": "3a62084f-910f-4660-addd-b08077991014",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        144
+      ],
+      "id": "82e815dd-a7e0-4b1d-8f01-51df75590d48",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_YOUR_WHATSAPP_PHONE_NUMBER_ID",
+        "recipientPhoneNumber": "REPLACE_WITH_RECIPIENT_PHONE_NUMBER",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        592,
+        -64
+      ],
+      "id": "926d53a7-fb91-43ff-8906-a3b930caf939",
+      "name": "Send message"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Birthday Reminder Bot"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Phone Number": "={{ $('Code in JavaScript').item.json.phone_number }}",
+            "ID": "={{ $('Code in JavaScript').item.json.id }}",
+            "Full Name": "={{ $('Code in JavaScript').item.json.full_name }}",
+            "Birthday": "={{ $('Code in JavaScript').item.json.birthday }}",
+            "Relationship": "={{ $('Code in JavaScript').item.json.relationship }}",
+            "City": "={{ $('Code in JavaScript').item.json.city }}",
+            "Status": "={{ $('Code in JavaScript').item.json.status }}",
+            "Birthday Wish Sent": "Yes",
+            "Last Wish Date": "={{ $('Code in JavaScript').item.json.today }}"
+          },
+          "matchingColumns": [
+            "Phone Number"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Birthday",
+              "displayName": "Birthday",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone Number",
+              "displayName": "Phone Number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Relationship",
+              "displayName": "Relationship",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Birthday Wish Sent",
+              "displayName": "Birthday Wish Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Wish Date",
+              "displayName": "Last Wish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        -64
+      ],
+      "id": "9f70c644-d9d6-42cd-b9ed-d6b08cd64c13",
+      "name": "Update row in sheet"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "pinData": {},
+  "active": false
+}
